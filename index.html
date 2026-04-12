@@ -210,13 +210,14 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif
     <div class="analyze-screen">
       <div class="spinner"></div>
       <div class="analyze-title">KI analysiert deinen Aufschlag...</div>
-      <div class="analyze-sub">Bitte warte einen Moment</div>
+      <div class="analyze-sub">Das Modell wird beim ersten Mal heruntergeladen (~5 MB)</div>
       <div class="analyze-steps">
         <div class="analyze-step" id="step-load"><span class="step-icon">&#9898;</span> Modell laden</div>
         <div class="analyze-step" id="step-frames"><span class="step-icon">&#9898;</span> Video-Frames analysieren</div>
-        <div class="analyze-step" id="step-pose"><span class="step-icon">&#9898;</span> Körperhaltung erkennen</div>
+        <div class="analyze-step" id="step-pose"><span class="step-icon">&#9898;</span> K&ouml;rperhaltung erkennen</div>
         <div class="analyze-step" id="step-eval"><span class="step-icon">&#9898;</span> Regeln auswerten</div>
       </div>
+      <button id="btn-skip-analysis" style="margin-top:24px;padding:12px 28px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);font-size:14px;cursor:pointer;">&Uuml;berspringen &rarr; Manuell pr&uuml;fen</button>
     </div>
   </div>
 
@@ -318,26 +319,54 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif
 let PoseLandmarker, FilesetResolver, poseLandmarker = null;
 let mediapipeLoaded = false;
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
+  ]);
+}
+
+let skipAnalysis = false;
+
 async function loadMediaPipe() {
+  if (mediapipeLoaded && poseLandmarker) return true;
   try {
-    const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14');
+    const vision = await withTimeout(
+      import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14'), 8000
+    );
+    if (skipAnalysis) return false;
     PoseLandmarker = vision.PoseLandmarker;
     FilesetResolver = vision.FilesetResolver;
-    const filesetResolver = await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
+    const filesetResolver = await withTimeout(
+      FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'), 8000
     );
-    poseLandmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
-      baseOptions: {
-        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
-        delegate: 'GPU'
-      },
-      runningMode: 'VIDEO',
-      numPoses: 1
-    });
+    if (skipAnalysis) return false;
+    // Try GPU first, fall back to CPU
+    let delegate = 'GPU';
+    try {
+      poseLandmarker = await withTimeout(PoseLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+          delegate: 'GPU'
+        },
+        runningMode: 'VIDEO', numPoses: 1
+      }), 10000);
+    } catch {
+      delegate = 'CPU';
+      poseLandmarker = await withTimeout(PoseLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+          delegate: 'CPU'
+        },
+        runningMode: 'VIDEO', numPoses: 1
+      }), 10000);
+    }
+    if (skipAnalysis) return false;
     mediapipeLoaded = true;
+    console.log('MediaPipe loaded with', delegate);
     return true;
   } catch (e) {
-    console.warn('MediaPipe failed:', e);
+    console.warn('MediaPipe failed:', e.message);
     return false;
   }
 }
@@ -479,40 +508,70 @@ function setStepState(id, state) {
 async function startAnalysis() {
   ruleResults = {};
   isSaved = false;
+  skipAnalysis = false;
   if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl);
   currentVideoUrl = URL.createObjectURL(currentVideoBlob);
 
+  // Reset step states
+  ['step-load','step-frames','step-pose','step-eval'].forEach(id => setStepState(id, ''));
+
   showScreen('screen-analyze');
 
-  // Step 1: Load MediaPipe
+  // Skip button handler
+  const skipBtn = $('btn-skip-analysis');
+  const skipHandler = () => { skipAnalysis = true; goToQuestions(); };
+  skipBtn.addEventListener('click', skipHandler, { once: true });
+
+  // Step 1: Load MediaPipe (with timeout)
   setStepState('step-load', 'active');
-  const loaded = await loadMediaPipe();
-  setStepState('step-load', loaded ? 'done' : 'done');
+  let loaded = false;
+  try {
+    loaded = await loadMediaPipe();
+  } catch { loaded = false; }
+  if (skipAnalysis) return;
+  setStepState('step-load', 'done');
 
   if (loaded) {
-    // Step 2: Extract frames
+    // Step 2: Extract frames (fewer frames = faster, with timeout)
     setStepState('step-frames', 'active');
-    const frames = await extractFrames(currentVideoUrl, 12);
+    let frames = [];
+    try {
+      frames = await withTimeout(extractFrames(currentVideoUrl, 8), 12000);
+    } catch { frames = []; }
+    if (skipAnalysis) return;
     setStepState('step-frames', 'done');
 
-    // Step 3: Pose detection
-    setStepState('step-pose', 'active');
-    const poseData = await analyzePoses(frames);
-    setStepState('step-pose', 'done');
+    if (frames.length > 0) {
+      // Step 3: Pose detection
+      setStepState('step-pose', 'active');
+      let poseData = [];
+      try {
+        poseData = await withTimeout(analyzePoses(frames), 15000);
+      } catch { poseData = []; }
+      if (skipAnalysis) return;
+      setStepState('step-pose', 'done');
 
-    // Step 4: Evaluate auto-detectable rules
-    setStepState('step-eval', 'active');
-    evaluateKI(poseData);
-    setStepState('step-eval', 'done');
+      // Step 4: Evaluate
+      setStepState('step-eval', 'active');
+      evaluateKI(poseData);
+      setStepState('step-eval', 'done');
+    } else {
+      setStepState('step-pose', 'done');
+      setStepState('step-eval', 'done');
+    }
   } else {
+    // KI konnte nicht geladen werden – alles als done markieren
     setStepState('step-frames', 'done');
     setStepState('step-pose', 'done');
     setStepState('step-eval', 'done');
   }
 
-  await new Promise(r => setTimeout(r, 600));
+  if (skipAnalysis) return;
+  await new Promise(r => setTimeout(r, 400));
+  goToQuestions();
+}
 
-  // Determine which questions to ask manually
+function goToQuestions() {
   manualQuestions = RULES.filter(r => !ruleResults[r.id]);
   if (manualQuestions.length > 0) {
     startQuestions();
@@ -526,26 +585,39 @@ async function extractFrames(url, count) {
     const video = document.createElement('video');
     video.muted = true;
     video.playsInline = true;
+    video.preload = 'auto';
     video.src = url;
 
+    // Timeout if metadata never loads
+    const metaTimeout = setTimeout(() => resolve([]), 8000);
+
     video.onloadedmetadata = async () => {
+      clearTimeout(metaTimeout);
       const duration = video.duration;
+      if (!duration || duration === Infinity) { resolve([]); return; }
+
       const canvas = document.createElement('canvas');
-      canvas.width = 640;
-      canvas.height = 480;
+      canvas.width = 480; // Smaller = faster
+      canvas.height = 360;
       const ctx = canvas.getContext('2d');
       const frames = [];
 
       for (let i = 0; i < count; i++) {
+        if (skipAnalysis) { resolve(frames); return; }
         const time = (duration / (count + 1)) * (i + 1);
         video.currentTime = time;
-        await new Promise(r => { video.onseeked = r; });
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        frames.push({ canvas, time: time * 1000, imageData: ctx.getImageData(0, 0, canvas.width, canvas.height) });
+        try {
+          await withTimeout(new Promise(r => { video.onseeked = r; }), 3000);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          frames.push({ canvas, time: time * 1000, imageData: ctx.getImageData(0, 0, canvas.width, canvas.height) });
+        } catch {
+          // Skip this frame if seek times out
+          continue;
+        }
       }
       resolve(frames);
     };
-    video.onerror = () => resolve([]);
+    video.onerror = () => { clearTimeout(metaTimeout); resolve([]); };
   });
 }
 
