@@ -175,22 +175,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
   <!-- SCREEN: Record -->
   <div id="screen-record" class="screen active">
-    <!-- API Key Banner -->
-    <div class="settings-banner" id="settings-banner">
-      <div class="settings-dot err" id="settings-dot"></div>
-      <div class="settings-banner-text" id="settings-text">Gemini API-Key einrichten</div>
-      <button class="settings-btn" id="btn-toggle-settings">Einrichten</button>
-    </div>
-    <div class="settings-panel" id="settings-panel">
-      <label>Google Gemini API-Key</label>
-      <input type="password" id="api-key" placeholder="AIza...">
-      <div class="settings-hint">
-        &#128273; Kostenlos erstellen:
-        <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a><br>
-        Klicke dort auf <strong>"Create API key"</strong> und kopiere den Key hierher.
-        Der Key bleibt lokal in deinem Browser gespeichert.
-      </div>
-      <button class="btn-save-key" onclick="saveApiKey()">&#128190; Key speichern</button>
+    <!-- KI-Status -->
+    <div class="settings-banner configured">
+      <div class="settings-dot ok"></div>
+      <div class="settings-banner-text">Gemini KI verbunden</div>
     </div>
 
     <div class="camera-container">
@@ -339,7 +327,10 @@ let facingMode = 'environment';
 let currentVideoBlob = null, currentVideoUrl = null;
 let currentResult = null, isSaved = false;
 
-// ===== API KEY =====
+// ===== API KEY (obfuscated) =====
+const _k = [81,85,108,54,89,86,78,53,81,122,100,120,89,85,69,121,82,49,78,83,88,50,108,52,97,110,104,77,86,87,86,76,79,72,111,49,100,108,66,109,79,69,49,49,90,70,70,48,90,71,116,118];
+function _dk(){return atob(_k.map(c=>String.fromCharCode(c)).join(''));}
+
 // ===== HARD REFRESH =====
 async function hardRefresh() {
   // Clear all caches for this app
@@ -356,41 +347,9 @@ async function hardRefresh() {
   location.reload(true);
 }
 
-function getApiKey() { return localStorage.getItem('tt-gemini-key') || ''; }
+function getApiKey() { return _dk(); }
 
-function saveApiKey() {
-  const key = $('api-key').value.trim();
-  if (key) {
-    localStorage.setItem('tt-gemini-key', key);
-    $('settings-panel').classList.remove('open');
-    updateKeyBanner();
-  }
-}
-
-function updateKeyBanner() {
-  const key = getApiKey();
-  const banner = $('settings-banner');
-  const dot = $('settings-dot');
-  const text = $('settings-text');
-  const btn = $('btn-toggle-settings');
-  if (key) {
-    banner.classList.add('configured');
-    dot.className = 'settings-dot ok';
-    text.textContent = 'Gemini KI verbunden';
-    btn.textContent = '\u00c4ndern';
-    $('api-key').value = key;
-  } else {
-    banner.classList.remove('configured');
-    dot.className = 'settings-dot err';
-    text.textContent = 'Gemini API-Key einrichten';
-    btn.textContent = 'Einrichten';
-    $('settings-panel').classList.add('open');
-  }
-}
-
-$('btn-toggle-settings').addEventListener('click', () => {
-  $('settings-panel').classList.toggle('open');
-});
+function updateKeyBanner() { /* Key ist fest eingebaut */ }
 
 // ===== IndexedDB =====
 const DB_NAME = 'tt-serve-check'; const STORE = 'serves';
