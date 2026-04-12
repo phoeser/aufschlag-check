@@ -455,11 +455,14 @@ async function startAnalysis() {
   // Step 1: Try File Upload, fallback to frame extraction
   setStep('step-upload', 'active');
   let fileUri = null;
+  let fileMimeType = null;
   let frames = null;
   let useFrames = false;
 
   try {
-    fileUri = await uploadVideoToGemini(apiKey, currentVideoBlob);
+    const uploadResult = await uploadVideoToGemini(apiKey, currentVideoBlob);
+    fileUri = uploadResult.uri;
+    fileMimeType = uploadResult.mimeType;
   } catch (uploadErr) {
     console.log('File Upload failed, trying frames:', uploadErr.message);
     // Fallback: extract frames from video
@@ -482,7 +485,7 @@ async function startAnalysis() {
     if (useFrames) {
       aiResult = await analyzeWithFrames(apiKey, frames);
     } else {
-      aiResult = await analyzeWithVideo(apiKey, fileUri);
+      aiResult = await analyzeWithVideo(apiKey, fileUri, fileMimeType);
     }
   } catch (e) {
     setStep('step-analyze', 'error');
@@ -591,7 +594,7 @@ async function uploadVideoToGemini(apiKey, blob) {
     const checkRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${apiKey}`);
     if (checkRes.ok) {
       const info = await checkRes.json();
-      if (info.state === 'ACTIVE') return info.uri;
+      if (info.state === 'ACTIVE') return { uri: info.uri, mimeType: info.mimeType || mimeType };
       if (info.state === 'FAILED') throw new Error('Video-Verarbeitung fehlgeschlagen');
     }
     attempts++;
@@ -601,9 +604,9 @@ async function uploadVideoToGemini(apiKey, blob) {
 }
 
 // ===== GEMINI ANALYZE (Video) =====
-async function analyzeWithVideo(apiKey, fileUri) {
+async function analyzeWithVideo(apiKey, fileUri, mimeType) {
   return callGeminiAPI(apiKey, [
-    { file_data: { file_uri: fileUri, mime_type: 'video/webm' } }
+    { file_data: { file_uri: fileUri, mime_type: mimeType || 'video/webm' } }
   ]);
 }
 
