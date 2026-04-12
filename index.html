@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>TT Aufschlag-Check</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a73e8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aufschlag-Check">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <style>
 :root {
   --primary:#1a73e8;--success:#0d9f6e;--danger:#e53e3e;--warning:#dd6b20;
@@ -749,6 +756,13 @@ $('file-input').addEventListener('change', e => { const f = e.target.files[0]; i
 renderRulesReference();
 updateKeyBanner();
 startCamera();
+
+// ===== PWA: Service Worker Registration =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    console.log('SW registered:', reg.scope);
+  }).catch(err => console.log('SW error:', err));
+}
 </script>
 </body>
 </html>
