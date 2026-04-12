@@ -452,19 +452,26 @@ async function startAnalysis() {
   ['step-upload','step-analyze','step-eval'].forEach(id => setStep(id, ''));
   showScreen('screen-analyze');
 
-  // Step 1: Upload video via File API
+  // Step 1: Try File Upload, fallback to frame extraction
   setStep('step-upload', 'active');
-  let fileUri;
+  let fileUri = null;
+  let frames = null;
+  let useFrames = false;
+
   try {
     fileUri = await uploadVideoToGemini(apiKey, currentVideoBlob);
-  } catch (e) {
-    setStep('step-upload', 'error');
-    let msg = e.message || 'Unbekannter Fehler';
-    if (msg.includes('API_KEY_INVALID') || msg.includes('API key')) msg = 'Ungültiger API-Key. Bitte prüfe deinen Gemini Key.';
-    else if (msg.includes('quota') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) msg = 'API-Limit erreicht. Bitte warte 1 Minute und versuche es erneut.';
-    else if (msg.includes('fetch') || msg.includes('Failed')) msg = 'Keine Internetverbindung. Bitte prüfe deine Verbindung.';
-    showError('Upload-Fehler', msg);
-    return;
+  } catch (uploadErr) {
+    console.log('File Upload failed, trying frames:', uploadErr.message);
+    // Fallback: extract frames from video
+    try {
+      frames = await extractFrames(currentVideoUrl, 6);
+      if (!frames || frames.length === 0) throw new Error('Keine Frames extrahiert');
+      useFrames = true;
+    } catch (frameErr) {
+      setStep('step-upload', 'error');
+      showError('Video-Fehler', 'Video konnte nicht verarbeitet werden.\n\nUpload: ' + uploadErr.message + '\nFrames: ' + frameErr.message);
+      return;
+    }
   }
   setStep('step-upload', 'done');
 
@@ -472,14 +479,15 @@ async function startAnalysis() {
   setStep('step-analyze', 'active');
   let aiResult;
   try {
-    aiResult = await analyzeWithGemini(apiKey, fileUri);
+    if (useFrames) {
+      aiResult = await analyzeWithFrames(apiKey, frames);
+    } else {
+      aiResult = await analyzeWithVideo(apiKey, fileUri);
+    }
   } catch (e) {
     setStep('step-analyze', 'error');
-    let msg = e.message || 'Unbekannter Fehler';
-    if (msg.includes('API_KEY_INVALID') || msg.includes('API key')) msg = 'Ungültiger API-Key. Bitte prüfe deinen Gemini Key.';
-    else if (msg.includes('quota') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) msg = 'API-Limit erreicht. Bitte warte 1 Minute und versuche es erneut.';
-    else if (msg.includes('PROCESSING') || msg.includes('not yet active')) msg = 'Video wird noch verarbeitet. Bitte versuche es gleich nochmal.';
-    showError('KI-Fehler', msg);
+    // Show REAL error for debugging
+    showError('KI-Fehler', e.message || 'Unbekannter Fehler');
     return;
   }
   setStep('step-analyze', 'done');
@@ -490,7 +498,7 @@ async function startAnalysis() {
     currentResult = parseGeminiResult(aiResult);
   } catch (e) {
     setStep('step-eval', 'error');
-    showError('Auswertungsfehler', 'Die KI-Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.');
+    showError('Auswertungsfehler', 'Die KI-Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.\n\nAntwort: ' + (aiResult || '').substring(0, 200));
     return;
   }
   setStep('step-eval', 'done');
@@ -499,12 +507,40 @@ async function startAnalysis() {
   showResultScreen();
 }
 
+// ===== FRAME EXTRACTION (Fallback) =====
+async function extractFrames(url, count) {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.muted = true; video.playsInline = true; video.preload = 'auto'; video.src = url;
+    const timeout = setTimeout(() => resolve([]), 12000);
+    video.onloadedmetadata = async () => {
+      clearTimeout(timeout);
+      const duration = video.duration;
+      if (!duration || duration === Infinity) { resolve([]); return; }
+      const canvas = document.createElement('canvas');
+      canvas.width = 512; canvas.height = 384;
+      const ctx = canvas.getContext('2d');
+      const frames = [];
+      for (let i = 0; i < count; i++) {
+        video.currentTime = (duration / (count + 1)) * (i + 1);
+        try {
+          await Promise.race([new Promise(r => { video.onseeked = r; }), new Promise((_,rej) => setTimeout(rej, 3000))]);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          frames.push(canvas.toDataURL('image/jpeg', 0.7).split(',')[1]);
+        } catch { continue; }
+      }
+      resolve(frames);
+    };
+    video.onerror = () => { clearTimeout(timeout); resolve([]); };
+  });
+}
+
 // ===== GEMINI FILE UPLOAD API =====
 async function uploadVideoToGemini(apiKey, blob) {
   const mimeType = blob.type || 'video/webm';
   const numBytes = blob.size;
 
-  // Step 1: Start resumable upload
+  // Start resumable upload
   const startRes = await fetch(`https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`, {
     method: 'POST',
     headers: {
@@ -519,13 +555,13 @@ async function uploadVideoToGemini(apiKey, blob) {
 
   if (!startRes.ok) {
     const err = await startRes.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Upload-Start fehlgeschlagen (HTTP ${startRes.status})`);
+    throw new Error(err?.error?.message || `Upload-Start HTTP ${startRes.status}`);
   }
 
   const uploadUrl = startRes.headers.get('X-Goog-Upload-URL');
   if (!uploadUrl) throw new Error('Kein Upload-URL erhalten');
 
-  // Step 2: Upload the actual bytes
+  // Upload the actual bytes
   const uploadRes = await fetch(uploadUrl, {
     method: 'POST',
     headers: {
@@ -538,14 +574,14 @@ async function uploadVideoToGemini(apiKey, blob) {
 
   if (!uploadRes.ok) {
     const err = await uploadRes.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Upload fehlgeschlagen (HTTP ${uploadRes.status})`);
+    throw new Error(err?.error?.message || `Upload HTTP ${uploadRes.status}`);
   }
 
   const fileInfo = await uploadRes.json();
   const fileUri = fileInfo?.file?.uri;
-  if (!fileUri) throw new Error('Keine Datei-URI erhalten');
+  if (!fileUri) throw new Error('Keine Datei-URI');
 
-  // Step 3: Wait for video processing (state must be ACTIVE)
+  // Wait for processing
   const fileName = fileInfo.file.name;
   let attempts = 0;
   while (attempts < 20) {
@@ -558,18 +594,32 @@ async function uploadVideoToGemini(apiKey, blob) {
     attempts++;
     await new Promise(r => setTimeout(r, 1500));
   }
-  throw new Error('Video-Verarbeitung dauert zu lange. Bitte versuche ein kürzeres Video.');
+  throw new Error('Video-Verarbeitung Timeout');
 }
 
-async function analyzeWithGemini(apiKey, fileUri) {
+// ===== GEMINI ANALYZE (Video) =====
+async function analyzeWithVideo(apiKey, fileUri) {
+  return callGeminiAPI(apiKey, [
+    { file_data: { file_uri: fileUri, mime_type: 'video/webm' } }
+  ]);
+}
+
+// ===== GEMINI ANALYZE (Frames Fallback) =====
+async function analyzeWithFrames(apiKey, frames) {
+  const imageParts = frames.map(f => ({ inline_data: { mime_type: 'image/jpeg', data: f } }));
+  return callGeminiAPI(apiKey, imageParts);
+}
+
+// ===== SHARED GEMINI API CALL =====
+async function callGeminiAPI(apiKey, mediaParts) {
   const ruleList = RULES.map((r, i) => `${i+1}. "${r.id}": ${r.name} – ${r.detail} (${r.ref})`).join('\n');
 
-  const prompt = `Du bist ein ITTF-Tischtennis-Schiedsrichter-Experte. Analysiere dieses Video eines Tischtennis-Aufschlags.
+  const prompt = `Du bist ein ITTF-Tischtennis-Schiedsrichter-Experte. Analysiere diesen Tischtennis-Aufschlag.
 
 Prüfe diese 8 offiziellen ITTF-Aufschlagregeln (Regel 2.06):
 ${ruleList}
 
-WICHTIG: Analysiere das Video genau. Achte auf die gesamte Aufschlagbewegung – vom Hochwerfen des Balls bis zum Schlag. Bewerte jede Regel einzeln als korrekt (true) oder fehlerhaft (false) basierend auf dem, was du im Video siehst. Wenn eine Regel nicht eindeutig zu erkennen ist, gib deine beste Einschätzung basierend auf dem sichtbaren Material.
+WICHTIG: Analysiere genau. Achte auf die gesamte Aufschlagbewegung – vom Hochwerfen des Balls bis zum Schlag. Bewerte jede Regel einzeln als korrekt (true) oder fehlerhaft (false). Wenn eine Regel nicht eindeutig zu erkennen ist, gib deine beste Einschätzung.
 
 Antworte NUR mit validem JSON in exakt diesem Format (keine Markdown-Codeblöcke, kein anderer Text):
 {
@@ -587,14 +637,13 @@ Antworte NUR mit validem JSON in exakt diesem Format (keine Markdown-Codeblöcke
   "summary": "Zusammenfassung auf Deutsch (2-3 Sätze)"
 }`;
 
+  const parts = [...mediaParts, { text: prompt }];
+
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [
-        { file_data: { file_uri: fileUri, mime_type: 'video/webm' } },
-        { text: prompt }
-      ]}],
+      contents: [{ parts }],
       generationConfig: { temperature: 0.2, maxOutputTokens: 1024 }
     })
   });
@@ -606,7 +655,10 @@ Antworte NUR mit validem JSON in exakt diesem Format (keine Markdown-Codeblöcke
 
   const data = await response.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Keine Antwort von Gemini erhalten');
+  if (!text) {
+    const reason = data?.candidates?.[0]?.finishReason || 'unknown';
+    throw new Error('Keine Antwort von Gemini (Grund: ' + reason + ')');
+  }
   return text;
 }
 
