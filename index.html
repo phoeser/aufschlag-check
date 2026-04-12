@@ -486,8 +486,11 @@ async function startAnalysis() {
     }
   } catch (e) {
     setStep('step-analyze', 'error');
-    // Show REAL error for debugging
-    showError('KI-Fehler', e.message || 'Unbekannter Fehler');
+    let msg = e.message || 'Unbekannter Fehler';
+    if (msg.includes('API_KEY_INVALID') || msg.includes('API key')) msg = 'Ungültiger API-Key. Bitte prüfe deinen Gemini Key.';
+    else if (msg.includes('quota') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) msg = 'API-Limit erreicht. Bitte warte einen Moment und versuche es erneut.';
+    else if (msg.includes('fetch') || msg.includes('Failed')) msg = 'Keine Internetverbindung. Bitte prüfe deine Verbindung.';
+    showError('KI-Fehler', msg);
     return;
   }
   setStep('step-analyze', 'done');
