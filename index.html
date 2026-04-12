@@ -650,7 +650,7 @@ Antworte NUR mit validem JSON in exakt diesem Format (keine Markdown-Codeblöcke
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 1024 } }
+      generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
     })
   });
 
@@ -661,8 +661,8 @@ Antworte NUR mit validem JSON in exakt diesem Format (keine Markdown-Codeblöcke
 
   const data = await response.json();
   // Gemini 2.5 may return multiple parts (thinking + answer) - get all text parts
-  const parts = data?.candidates?.[0]?.content?.parts || [];
-  const text = parts.filter(p => p.text).map(p => p.text).join('\n');
+  const resParts = data?.candidates?.[0]?.content?.parts || [];
+  const text = resParts.filter(p => p.text).map(p => p.text).join('\n');
   if (!text) {
     const reason = data?.candidates?.[0]?.finishReason || 'unknown';
     throw new Error('Keine Antwort von Gemini (Grund: ' + reason + ')');
