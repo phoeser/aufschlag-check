@@ -5,603 +5,177 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>TT Aufschlag-Check</title>
 <style>
-  :root {
-    --primary: #1a73e8;
-    --primary-dark: #1557b0;
-    --success: #0d9f6e;
-    --danger: #e53e3e;
-    --warning: #dd6b20;
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface2: #242734;
-    --text: #e8eaed;
-    --text-muted: #9aa0a6;
-    --border: #2d3040;
-    --radius: 14px;
-  }
+:root {
+  --primary: #1a73e8; --primary-dark: #1557b0;
+  --success: #0d9f6e; --danger: #e53e3e; --warning: #dd6b20;
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #242734;
+  --text: #e8eaed; --text-muted: #9aa0a6; --border: #2d3040; --radius: 14px;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100dvh; overflow-x:hidden; }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* Header */
+.header { background:linear-gradient(135deg,var(--primary),#4285f4); padding:16px 20px 20px; text-align:center; }
+.header h1 { font-size:20px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px; }
+.header p { font-size:12px; opacity:0.85; margin-top:2px; }
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100dvh;
-    overflow-x: hidden;
-  }
+/* Screens */
+.screen { display:none; } .screen.active { display:block; }
+.main-content { padding-bottom:80px; }
 
-  /* Header */
-  .header {
-    background: linear-gradient(135deg, var(--primary), #4285f4);
-    padding: 20px 20px 24px;
-    text-align: center;
-    position: relative;
-  }
-  .header h1 {
-    font-size: 22px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-  }
-  .header p {
-    font-size: 13px;
-    opacity: 0.85;
-    margin-top: 4px;
-  }
+/* Camera */
+.camera-container { position:relative; width:100%; aspect-ratio:4/3; background:#000; overflow:hidden; }
+.camera-container video { width:100%; height:100%; object-fit:cover; }
+.camera-overlay { position:absolute; inset:0; pointer-events:none; }
+.camera-guide { position:absolute; inset:10%; border:2px dashed rgba(255,255,255,0.25); border-radius:12px; }
+.camera-guide-label { position:absolute; top:12%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:#fff; padding:4px 12px; border-radius:20px; font-size:11px; white-space:nowrap; }
+.rec-indicator { position:absolute; top:14px; left:14px; display:none; align-items:center; gap:6px; background:rgba(229,62,62,0.9); padding:5px 12px; border-radius:20px; font-size:12px; font-weight:600; z-index:10; }
+.rec-indicator.active { display:flex; }
+.rec-dot { width:8px;height:8px;background:#fff;border-radius:50%;animation:pulse 1s ease infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.timer { position:absolute; top:14px; right:14px; background:rgba(0,0,0,0.6); padding:5px 12px; border-radius:20px; font-size:13px; font-variant-numeric:tabular-nums; display:none; z-index:10; }
+.timer.active { display:block; }
 
-  /* Screens */
-  .screen { display: none; }
-  .screen.active { display: block; }
+.controls-bar { padding:20px 20px 32px; display:flex; align-items:center; justify-content:center; gap:28px; background:var(--surface); }
+.btn-record { width:68px;height:68px;border-radius:50%;border:4px solid #fff;background:transparent;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center; }
+.btn-record::after { content:'';width:52px;height:52px;background:var(--danger);border-radius:50%;transition:all .3s; }
+.btn-record.recording::after { width:24px;height:24px;border-radius:5px; }
+.btn-icon { width:44px;height:44px;border-radius:50%;border:none;background:var(--surface2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px; }
 
-  /* Record Screen */
-  .camera-container {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 4/3;
-    background: #000;
-    overflow: hidden;
-  }
-  .camera-container video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .camera-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 20px;
-    pointer-events: none;
-  }
-  .camera-guide {
-    position: absolute;
-    inset: 10%;
-    border: 2px dashed rgba(255,255,255,0.3);
-    border-radius: 12px;
-  }
-  .camera-guide-label {
-    position: absolute;
-    top: 12%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.6);
-    color: #fff;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    white-space: nowrap;
-  }
+/* Analyzing Screen */
+.analyze-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; padding:40px 20px; text-align:center; }
+.spinner { width:80px;height:80px;border:4px solid var(--surface2);border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:24px; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.analyze-title { font-size:18px;font-weight:700;margin-bottom:8px; }
+.analyze-sub { font-size:14px;color:var(--text-muted);margin-bottom:20px; }
+.analyze-steps { text-align:left; width:100%; max-width:300px; }
+.analyze-step { display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px;color:var(--text-muted); }
+.analyze-step.done { color:var(--success); }
+.analyze-step.active { color:var(--text); }
+.step-icon { width:24px;text-align:center;font-size:16px; }
 
-  .rec-indicator {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    display: none;
-    align-items: center;
-    gap: 8px;
-    background: rgba(229,62,62,0.9);
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
-    pointer-events: none;
-    z-index: 10;
-  }
-  .rec-indicator.active { display: flex; }
-  .rec-dot {
-    width: 10px; height: 10px;
-    background: #fff;
-    border-radius: 50%;
-    animation: pulse 1s ease infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
+/* Quick Questions */
+.question-screen { padding:20px 16px; }
+.question-progress { display:flex;gap:4px;margin-bottom:20px; }
+.progress-dot { flex:1;height:4px;border-radius:2px;background:var(--surface2);transition:background .3s; }
+.progress-dot.done { background:var(--success); }
+.progress-dot.current { background:var(--primary); }
 
-  .timer {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: rgba(0,0,0,0.6);
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-variant-numeric: tabular-nums;
-    display: none;
-    pointer-events: none;
-    z-index: 10;
-  }
-  .timer.active { display: block; }
+.question-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;text-align:center;animation:fadeIn .3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.question-badge { display:inline-block;background:var(--surface2);padding:4px 12px;border-radius:20px;font-size:11px;color:var(--text-muted);margin-bottom:16px; }
+.question-text { font-size:18px;font-weight:700;line-height:1.4;margin-bottom:8px; }
+.question-hint { font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:24px; }
+.question-buttons { display:flex;gap:12px; }
+.q-btn { flex:1;padding:16px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s; }
+.q-btn:active { transform:scale(.96); }
+.q-btn.yes:active,.q-btn.yes:hover { border-color:var(--success);background:rgba(13,159,110,.15); }
+.q-btn.no:active,.q-btn.no:hover { border-color:var(--danger);background:rgba(229,62,62,.15); }
 
-  .controls-bar {
-    padding: 24px 20px 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 32px;
-    background: var(--surface);
-  }
+.video-mini { width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;margin-bottom:16px;background:#000; }
+.video-mini video { width:100%;height:100%;object-fit:contain; }
 
-  .btn-record {
-    width: 72px; height: 72px;
-    border-radius: 50%;
-    border: 4px solid #fff;
-    background: transparent;
-    cursor: pointer;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-  }
-  .btn-record::after {
-    content: '';
-    width: 56px; height: 56px;
-    background: var(--danger);
-    border-radius: 50%;
-    transition: all 0.3s;
-  }
-  .btn-record.recording::after {
-    width: 28px; height: 28px;
-    border-radius: 6px;
-  }
+/* Result */
+.result-section { padding:20px 16px; }
+.result-card { background:var(--surface);border-radius:var(--radius);padding:24px;text-align:center;border:2px solid var(--border); }
+.result-card.pass { border-color:var(--success);background:rgba(13,159,110,.08); }
+.result-card.fail { border-color:var(--danger);background:rgba(229,62,62,.08); }
+.result-card.partial { border-color:var(--warning);background:rgba(221,107,32,.08); }
 
-  .btn-icon {
-    width: 48px; height: 48px;
-    border-radius: 50%;
-    border: none;
-    background: var(--surface2);
-    color: var(--text);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    transition: background 0.2s;
-  }
-  .btn-icon:active { background: var(--border); }
+.score-gauge { position:relative;width:150px;height:150px;margin:0 auto 16px; }
+.score-gauge svg { width:100%;height:100%;transform:rotate(-90deg); }
+.score-gauge-bg { fill:none;stroke:var(--surface2);stroke-width:10; }
+.score-gauge-fill { fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1s ease,stroke .5s ease; }
+.score-gauge-text { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center; }
+.score-number { font-size:48px;font-weight:800;line-height:1; }
+.score-label { font-size:12px;color:var(--text-muted);margin-top:4px; }
+.score-green { color:var(--success); } .score-yellow { color:var(--warning); } .score-red { color:var(--danger); }
 
-  /* Review Screen */
-  .review-video-container {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 4/3;
-    background: #000;
-  }
-  .review-video-container video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
+.result-title { font-size:20px;font-weight:700;margin-bottom:4px; }
+.result-subtitle { font-size:14px;color:var(--text-muted);margin-bottom:16px; }
+.result-details { text-align:left; }
+.result-item { display:flex;align-items:center;gap:8px;padding:8px 0;font-size:14px;border-bottom:1px solid var(--border); }
+.result-item:last-child { border:none; }
+.result-item .icon { font-size:16px;flex-shrink:0; }
+.ki-badge { font-size:10px;background:rgba(26,115,232,.2);color:var(--primary);padding:2px 6px;border-radius:4px;margin-left:auto;flex-shrink:0; }
 
-  .playback-controls {
-    background: var(--surface);
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .playback-btn {
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    border: none;
-    background: var(--primary);
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
-  }
-  .playback-btn:active { background: var(--primary-dark); }
-  .playback-btn.small {
-    width: 36px; height: 36px;
-    background: var(--surface2);
-    font-size: 14px;
-  }
+/* Action Buttons */
+.action-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px; }
+.btn-action { padding:14px 12px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s; }
+.btn-action:active { transform:scale(.97); }
+.btn-save { background:var(--primary);color:#fff; }
+.btn-save.saved { background:var(--success);color:#fff;pointer-events:none; }
+.btn-whatsapp { background:#25D366;color:#fff; }
+.btn-delete { background:var(--surface2);color:var(--danger);border:1px solid var(--border); }
+.btn-new { background:var(--surface2);color:var(--text);border:1px solid var(--border); }
 
-  .speed-selector {
-    display: flex;
-    gap: 4px;
-    margin-left: auto;
-  }
-  .speed-btn {
-    padding: 6px 10px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .speed-btn.active {
-    background: var(--primary);
-    color: #fff;
-    border-color: var(--primary);
-  }
+/* History */
+.history-section { padding:16px; }
+.history-item { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px; }
+.history-icon { font-size:24px; }
+.history-info { flex:1; }
+.history-info strong { font-size:14px;display:block; }
+.history-info span { font-size:12px;color:var(--text-muted); }
+.history-score { font-size:14px;font-weight:700;padding:4px 10px;border-radius:8px; }
+.history-score.pass { background:rgba(13,159,110,.15);color:var(--success); }
+.history-score.partial { background:rgba(221,107,32,.15);color:var(--warning); }
+.history-score.fail { background:rgba(229,62,62,.15);color:var(--danger); }
+.history-actions { display:flex;gap:6px; }
+.history-btn { width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px; }
+.history-btn.delete { color:var(--danger); }
 
-  .timeline {
-    width: 100%;
-    padding: 8px 16px;
-    background: var(--surface);
-  }
-  .timeline input[type=range] {
-    width: 100%;
-    -webkit-appearance: none;
-    appearance: none;
-    height: 6px;
-    background: var(--border);
-    border-radius: 3px;
-    outline: none;
-  }
-  .timeline input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 18px; height: 18px;
-    background: var(--primary);
-    border-radius: 50%;
-    cursor: grab;
-  }
+.empty-state { text-align:center;padding:48px 20px;color:var(--text-muted); }
+.empty-state .icon { font-size:48px;margin-bottom:12px;opacity:.5; }
 
-  /* Checklist */
-  .checklist-section {
-    padding: 16px;
-  }
-  .checklist-title {
-    font-size: 17px;
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-  .checklist-subtitle {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-bottom: 16px;
-  }
+/* Rules */
+.rule-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px; }
+.rule-header { display:flex;align-items:flex-start;gap:12px; }
+.rule-number { width:26px;height:26px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;color:var(--text-muted); }
+.rule-content { flex:1; }
+.rule-name { font-size:14px;font-weight:600;line-height:1.3; }
+.rule-desc { font-size:13px;color:var(--text-muted);margin-top:3px;line-height:1.4; }
+.rule-ref { font-size:11px;color:var(--text-muted);opacity:.7;margin-top:3px; }
 
-  .rule-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    margin-bottom: 10px;
-    transition: all 0.2s;
-  }
-  .rule-card.checked-ok {
-    border-color: var(--success);
-    background: rgba(13,159,110,0.08);
-  }
-  .rule-card.checked-fail {
-    border-color: var(--danger);
-    background: rgba(229,62,62,0.08);
-  }
+/* Tips */
+.tip-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px; }
+.tip-icon { font-size:22px;flex-shrink:0; }
+.tip-text { font-size:13px;line-height:1.5; }
+.tip-text strong { color:var(--text); }
+.tip-text span { color:var(--text-muted); }
 
-  .rule-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .rule-number {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: var(--surface2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-weight: 700;
-    flex-shrink: 0;
-    color: var(--text-muted);
-  }
-  .rule-card.checked-ok .rule-number { background: var(--success); color: #fff; }
-  .rule-card.checked-fail .rule-number { background: var(--danger); color: #fff; }
+/* Bottom Nav */
+.bottom-nav { position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;padding:6px 0 max(6px,env(safe-area-inset-bottom));z-index:100; }
+.nav-item { flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:none;color:var(--text-muted);font-size:10px;cursor:pointer; }
+.nav-item.active { color:var(--primary); }
+.nav-item svg { width:22px;height:22px; }
 
-  .rule-content { flex: 1; }
-  .rule-name {
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.3;
-  }
-  .rule-desc {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-top: 3px;
-    line-height: 1.4;
-  }
-  .rule-ref {
-    font-size: 11px;
-    color: var(--text-muted);
-    opacity: 0.7;
-    margin-top: 4px;
-  }
+/* Confirm dialog */
+.confirm-overlay { position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px; }
+.confirm-box { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;max-width:320px;width:100%; }
+.confirm-box h3 { font-size:16px;margin-bottom:8px; }
+.confirm-box p { font-size:14px;color:var(--text-muted);margin-bottom:20px; }
+.confirm-buttons { display:flex;gap:10px; }
+.confirm-buttons button { flex:1;padding:12px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer; }
+.confirm-cancel { background:var(--surface2);color:var(--text); }
+.confirm-delete { background:var(--danger);color:#fff; }
 
-  .rule-buttons {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-    padding-left: 40px;
-  }
-  .rule-btn {
-    flex: 1;
-    padding: 10px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--surface2);
-    color: var(--text);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: all 0.2s;
-  }
-  .rule-btn:active { transform: scale(0.97); }
-  .rule-btn.ok-active {
-    background: var(--success);
-    border-color: var(--success);
-    color: #fff;
-  }
-  .rule-btn.fail-active {
-    background: var(--danger);
-    border-color: var(--danger);
-    color: #fff;
-  }
-
-  /* Result */
-  .result-section {
-    padding: 20px 16px 32px;
-  }
-  .result-card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: 24px;
-    text-align: center;
-    border: 2px solid var(--border);
-  }
-  .result-card.pass {
-    border-color: var(--success);
-    background: rgba(13,159,110,0.08);
-  }
-  .result-card.fail {
-    border-color: var(--danger);
-    background: rgba(229,62,62,0.08);
-  }
-  .result-card.partial {
-    border-color: var(--warning);
-    background: rgba(221,107,32,0.08);
-  }
-
-  .result-icon {
-    font-size: 56px;
-    margin-bottom: 12px;
-  }
-  .result-title {
-    font-size: 22px;
-    font-weight: 700;
-  }
-  .result-score {
-    font-size: 15px;
-    color: var(--text-muted);
-    margin-top: 6px;
-  }
-  .result-details {
-    margin-top: 16px;
-    text-align: left;
-  }
-  .result-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-    font-size: 14px;
-    border-bottom: 1px solid var(--border);
-  }
-  .result-item:last-child { border: none; }
-  .result-item .icon { font-size: 18px; }
-
-  /* Action buttons */
-  .action-bar {
-    padding: 16px;
-    display: flex;
-    gap: 10px;
-  }
-  .btn-action {
-    flex: 1;
-    padding: 14px;
-    border-radius: 12px;
-    border: none;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all 0.2s;
-  }
-  .btn-action:active { transform: scale(0.97); }
-  .btn-primary {
-    background: var(--primary);
-    color: #fff;
-  }
-  .btn-secondary {
-    background: var(--surface2);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  .btn-success {
-    background: var(--success);
-    color: #fff;
-  }
-
-  /* Intro tips */
-  .tips-section {
-    padding: 16px;
-  }
-  .tip-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .tip-icon {
-    font-size: 24px;
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-  .tip-text {
-    font-size: 14px;
-    line-height: 1.5;
-  }
-  .tip-text strong { color: var(--text); }
-  .tip-text span { color: var(--text-muted); }
-
-  /* No camera fallback */
-  .no-camera {
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--text-muted);
-  }
-  .no-camera svg {
-    width: 64px; height: 64px;
-    margin-bottom: 16px;
-    opacity: 0.5;
-  }
-
-  /* History */
-  .history-section {
-    padding: 16px;
-  }
-  .history-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-  }
-  .history-icon { font-size: 28px; }
-  .history-info { flex: 1; }
-  .history-info strong { font-size: 14px; display: block; }
-  .history-info span { font-size: 12px; color: var(--text-muted); }
-  .history-score {
-    font-size: 15px;
-    font-weight: 700;
-    padding: 4px 12px;
-    border-radius: 8px;
-  }
-  .history-score.pass { background: rgba(13,159,110,0.15); color: var(--success); }
-  .history-score.fail { background: rgba(229,62,62,0.15); color: var(--danger); }
-
-  /* Empty state */
-  .empty-state {
-    text-align: center;
-    padding: 48px 20px;
-    color: var(--text-muted);
-  }
-  .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
-  .empty-state p { font-size: 14px; }
-
-  /* Bottom nav */
-  .bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    display: flex;
-    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
-    z-index: 100;
-  }
-  .nav-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 8px;
-    border: none;
-    background: none;
-    color: var(--text-muted);
-    font-size: 11px;
-    cursor: pointer;
-    transition: color 0.2s;
-  }
-  .nav-item.active { color: var(--primary); }
-  .nav-item svg { width: 24px; height: 24px; }
-
-  .main-content {
-    padding-bottom: 80px;
-  }
-
-  /* Upload area */
-  .upload-area {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 24px;
-    text-align: center;
-    margin: 16px;
-    cursor: pointer;
-    transition: border-color 0.2s;
-  }
-  .upload-area:active { border-color: var(--primary); }
-  .upload-area .icon { font-size: 36px; margin-bottom: 8px; }
-  .upload-area p { font-size: 14px; color: var(--text-muted); }
-
-  .or-divider {
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 13px;
-    padding: 8px 16px;
-  }
+/* Playback mini controls */
+.mini-playback { display:flex;align-items:center;gap:8px;padding:8px 0; }
+.mini-btn { width:32px;height:32px;border-radius:50%;border:none;background:var(--surface2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px; }
+.mini-speed { display:flex;gap:4px;margin-left:auto; }
+.mini-speed button { padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer; }
+.mini-speed button.active { background:var(--primary);color:#fff;border-color:var(--primary); }
 </style>
 </head>
 <body>
 
-<!-- Header -->
 <div class="header">
   <h1>&#127955; TT Aufschlag-Check</h1>
   <p>Tischtennis-Aufschlaganalyse nach ITTF-Regeln</p>
 </div>
 
 <div class="main-content">
+
   <!-- SCREEN: Record -->
   <div id="screen-record" class="screen active">
     <div class="camera-container">
@@ -610,95 +184,59 @@
         <div class="camera-guide"></div>
         <div class="camera-guide-label">Aufschlag im Rahmen halten</div>
       </div>
-      <div id="rec-indicator" class="rec-indicator">
-        <div class="rec-dot"></div>
-        <span>REC</span>
-      </div>
+      <div id="rec-indicator" class="rec-indicator"><div class="rec-dot"></div><span>REC</span></div>
       <div id="timer" class="timer">00:00</div>
     </div>
-
     <div class="controls-bar">
       <button class="btn-icon" id="btn-flip" title="Kamera wechseln">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"/><path d="M8 21H3v-5"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"/><path d="M8 21H3v-5"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
       </button>
-      <button class="btn-record" id="btn-record" title="Aufnahme starten"></button>
+      <button class="btn-record" id="btn-record"></button>
       <button class="btn-icon" id="btn-upload-trigger" title="Video hochladen">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </button>
     </div>
-
     <input type="file" id="file-input" accept="video/*" style="display:none">
-
-    <div class="tips-section">
+    <div style="padding:12px 16px">
       <div class="tip-card">
         <div class="tip-icon">&#128247;</div>
-        <div class="tip-text">
-          <strong>Positionierung</strong><br>
-          <span>Filme von der Seite, damit Hand, Ball und Wurfhöhe gut sichtbar sind.</span>
-        </div>
-      </div>
-      <div class="tip-card">
-        <div class="tip-icon">&#128260;</div>
-        <div class="tip-text">
-          <strong>Slow-Motion</strong><br>
-          <span>Nach der Aufnahme kannst du den Aufschlag in Zeitlupe analysieren.</span>
-        </div>
-      </div>
-      <div class="tip-card">
-        <div class="tip-icon">&#9989;</div>
-        <div class="tip-text">
-          <strong>Checkliste</strong><br>
-          <span>Prüfe jeden Aufschlag gegen alle offiziellen ITTF-Regeln (Regel 2.06).</span>
-        </div>
+        <div class="tip-text"><strong>Tipp:</strong> <span>Filme von der Seite, damit Hand, Ball und Wurfhöhe sichtbar sind.</span></div>
       </div>
     </div>
   </div>
 
-  <!-- SCREEN: Review -->
-  <div id="screen-review" class="screen">
-    <div class="review-video-container">
-      <video id="review-video" playsinline loop></video>
-    </div>
-
-    <div class="timeline">
-      <input type="range" id="video-timeline" min="0" max="1000" value="0">
-    </div>
-
-    <div class="playback-controls">
-      <button class="playback-btn small" id="btn-step-back" title="Frame zurück">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-      </button>
-      <button class="playback-btn" id="btn-play-pause" title="Abspielen/Pause">
-        <svg id="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        <svg id="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-      </button>
-      <button class="playback-btn small" id="btn-step-forward" title="Frame vor">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-      </button>
-      <div class="speed-selector">
-        <button class="speed-btn" data-speed="0.1">0.1x</button>
-        <button class="speed-btn active" data-speed="0.25">0.25x</button>
-        <button class="speed-btn" data-speed="0.5">0.5x</button>
-        <button class="speed-btn" data-speed="1">1x</button>
+  <!-- SCREEN: Analyzing -->
+  <div id="screen-analyze" class="screen">
+    <div class="analyze-screen">
+      <div class="spinner"></div>
+      <div class="analyze-title">KI analysiert deinen Aufschlag...</div>
+      <div class="analyze-sub">Bitte warte einen Moment</div>
+      <div class="analyze-steps">
+        <div class="analyze-step" id="step-load"><span class="step-icon">&#9898;</span> Modell laden</div>
+        <div class="analyze-step" id="step-frames"><span class="step-icon">&#9898;</span> Video-Frames analysieren</div>
+        <div class="analyze-step" id="step-pose"><span class="step-icon">&#9898;</span> Körperhaltung erkennen</div>
+        <div class="analyze-step" id="step-eval"><span class="step-icon">&#9898;</span> Regeln auswerten</div>
       </div>
     </div>
+  </div>
 
-    <!-- ITTF Checklist -->
-    <div class="checklist-section">
-      <div class="checklist-title">ITTF Aufschlagregeln (Regel 2.06)</div>
-      <div class="checklist-subtitle">Prüfe jeden Punkt anhand des Videos</div>
-
-      <div id="checklist-container"></div>
-    </div>
-
-    <div class="action-bar">
-      <button class="btn-action btn-secondary" id="btn-back-to-record">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-        Zurück
-      </button>
-      <button class="btn-action btn-primary" id="btn-show-result">
-        Ergebnis anzeigen
-      </button>
+  <!-- SCREEN: Quick Questions -->
+  <div id="screen-questions" class="screen">
+    <div class="question-screen">
+      <div class="question-progress" id="question-progress"></div>
+      <div class="video-mini">
+        <video id="question-video" playsinline loop muted></video>
+        <div class="mini-playback">
+          <button class="mini-btn" id="q-play">&#9654;</button>
+          <div class="mini-speed">
+            <button data-speed="0.1">0.1x</button>
+            <button data-speed="0.25" class="active">0.25x</button>
+            <button data-speed="0.5">0.5x</button>
+            <button data-speed="1">1x</button>
+          </div>
+        </div>
+      </div>
+      <div id="question-container"></div>
     </div>
   </div>
 
@@ -706,28 +244,33 @@
   <div id="screen-result" class="screen">
     <div class="result-section">
       <div id="result-card" class="result-card">
-        <div id="result-icon" class="result-icon"></div>
+        <div class="score-gauge">
+          <svg viewBox="0 0 120 120">
+            <circle class="score-gauge-bg" cx="60" cy="60" r="50"/>
+            <circle id="score-gauge-fill" class="score-gauge-fill" cx="60" cy="60" r="50" stroke-dasharray="314" stroke-dashoffset="314"/>
+          </svg>
+          <div class="score-gauge-text">
+            <div id="score-number" class="score-number">–</div>
+            <div class="score-label">von 10</div>
+          </div>
+        </div>
         <div id="result-title" class="result-title"></div>
-        <div id="result-score" class="result-score"></div>
+        <div id="result-subtitle" class="result-subtitle"></div>
         <div id="result-details" class="result-details"></div>
       </div>
     </div>
-
-    <div class="action-bar">
-      <button class="btn-action btn-secondary" id="btn-back-to-review">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-        Checkliste
-      </button>
-      <button class="btn-action btn-success" id="btn-new-serve">
-        &#127955; Neuer Aufschlag
-      </button>
+    <div class="action-grid">
+      <button class="btn-action btn-save" id="btn-save">&#128190; Speichern</button>
+      <button class="btn-action btn-whatsapp" id="btn-whatsapp">&#128172; WhatsApp</button>
+      <button class="btn-action btn-delete" id="btn-delete">&#128465; Verwerfen</button>
+      <button class="btn-action btn-new" id="btn-new">&#127955; Neu</button>
     </div>
   </div>
 
   <!-- SCREEN: History -->
   <div id="screen-history" class="screen">
     <div class="history-section">
-      <h2 style="font-size:18px;margin-bottom:12px">Verlauf</h2>
+      <h2 style="font-size:17px;margin-bottom:12px">Verlauf</h2>
       <div id="history-list"></div>
     </div>
   </div>
@@ -735,14 +278,26 @@
   <!-- SCREEN: Rules -->
   <div id="screen-rules" class="screen">
     <div style="padding:16px">
-      <h2 style="font-size:18px;margin-bottom:4px">ITTF Aufschlagregeln</h2>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Offizielle Regeln nach ITTF Regel 2.06</p>
+      <h2 style="font-size:17px;margin-bottom:4px">ITTF Aufschlagregeln</h2>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Offizielle Regeln nach ITTF Regel 2.06</p>
       <div id="rules-reference"></div>
     </div>
   </div>
 </div>
 
-<!-- Bottom Navigation -->
+<!-- Confirm Dialog -->
+<div id="confirm-overlay" class="confirm-overlay" style="display:none">
+  <div class="confirm-box">
+    <h3 id="confirm-title"></h3>
+    <p id="confirm-text"></p>
+    <div class="confirm-buttons">
+      <button class="confirm-cancel" id="confirm-cancel">Abbrechen</button>
+      <button class="confirm-delete" id="confirm-ok">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
 <div class="bottom-nav">
   <button class="nav-item active" data-screen="screen-record">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
@@ -758,115 +313,133 @@
   </button>
 </div>
 
-<script>
-// ===== ITTF SERVE RULES =====
-const RULES = [
-  {
-    id: 'open_hand',
-    name: 'Offene, flache Hand',
-    desc: 'Der Ball liegt frei auf der offenen, flachen Handfläche der freien Hand (nicht auf den Fingern).',
-    ref: 'ITTF 2.06.01',
-    detail: 'Die freie Hand muss still gehalten werden. Der Ball muss auf der offenen, flachen Handfläche ruhen, ohne von den Fingern eingeklemmt zu werden.'
-  },
-  {
-    id: 'above_table',
-    name: 'Über Tischniveau',
-    desc: 'Der Ball befindet sich zu Beginn über dem Tischniveau und hinter der Grundlinie des Aufschlägers.',
-    ref: 'ITTF 2.06.04',
-    detail: 'Der Ball muss sich hinter der Grundlinie (Endlinie) des Tisches befinden und über dem Niveau der Spielfläche.'
-  },
-  {
-    id: 'toss_vertical',
-    name: 'Nahezu senkrecht hochwerfen',
-    desc: 'Der Ball wird nahezu senkrecht (max. ~30° Abweichung) nach oben geworfen, ohne Drall.',
-    ref: 'ITTF 2.06.02',
-    detail: 'Der Aufschläger muss den Ball nahezu senkrecht nach oben werfen, ohne ihm dabei Drall (Rotation) mitzugeben.'
-  },
-  {
-    id: 'toss_height',
-    name: 'Mindestens 16 cm Wurfhöhe',
-    desc: 'Der Ball steigt nach dem Verlassen der Hand mindestens 16 cm auf.',
-    ref: 'ITTF 2.06.02',
-    detail: 'Der Ball muss nach Verlassen der freien Hand mindestens 16 cm aufsteigen. Das entspricht ungefähr der Breite einer Handfläche plus etwas mehr.'
-  },
-  {
-    id: 'hit_on_fall',
-    name: 'Schlag beim Fallen',
-    desc: 'Der Ball wird erst geschlagen, nachdem er den höchsten Punkt erreicht hat und fällt.',
-    ref: 'ITTF 2.06.03',
-    detail: 'Der Ball darf erst geschlagen werden, wenn er nach dem Hochwerfen wieder fällt. Er darf nicht im Aufstieg oder am höchsten Punkt getroffen werden.'
-  },
-  {
-    id: 'visible_opponent',
-    name: 'Sichtbar für den Gegner',
-    desc: 'Der Ball ist vom Moment des Hochwerfens bis zum Schlag für den Gegner immer sichtbar.',
-    ref: 'ITTF 2.06.05',
-    detail: 'Kein Körperteil oder Kleidungsstück darf den Ball zwischen dem Hochwerfen und dem Schlag verdecken. Der Gegner muss den Ball jederzeit sehen können.'
-  },
-  {
-    id: 'not_hidden',
-    name: 'Nicht verdeckt durch Körper/Arm',
-    desc: 'Der Aufschläger verdeckt den Ball nicht mit dem freien Arm oder dem Körper.',
-    ref: 'ITTF 2.06.05',
-    detail: 'Sobald der Ball hochgeworfen wird, muss der freie Arm und die Hand aus dem Raum zwischen Ball und Netz entfernt werden.'
-  },
-  {
-    id: 'hand_removed',
-    name: 'Freie Hand entfernt',
-    desc: 'Die freie Hand wird nach dem Hochwerfen sofort aus dem Bereich zwischen Ball und Netz entfernt.',
-    ref: 'ITTF 2.06.02',
-    detail: 'Nach dem Hochwerfen muss die freie Hand aus dem Bereich zwischen Körper und Netz bewegt werden, damit sie den Ball nicht verdeckt.'
+<script type="module">
+// ===== MediaPipe Import =====
+let PoseLandmarker, FilesetResolver, poseLandmarker = null;
+let mediapipeLoaded = false;
+
+async function loadMediaPipe() {
+  try {
+    const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14');
+    PoseLandmarker = vision.PoseLandmarker;
+    FilesetResolver = vision.FilesetResolver;
+    const filesetResolver = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
+    );
+    poseLandmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+        delegate: 'GPU'
+      },
+      runningMode: 'VIDEO',
+      numPoses: 1
+    });
+    mediapipeLoaded = true;
+    return true;
+  } catch (e) {
+    console.warn('MediaPipe failed:', e);
+    return false;
   }
+}
+
+// ===== RULES =====
+const RULES = [
+  { id:'open_hand', name:'Offene, flache Hand', desc:'Ball liegt frei auf der offenen, flachen Handfläche', ref:'ITTF 2.06.01', detail:'Die freie Hand muss still gehalten werden. Der Ball muss auf der offenen, flachen Handfläche ruhen.', question:'Lag der Ball auf der offenen, flachen Hand?', hint:'Die Hand muss flach und offen sein – der Ball darf nicht von Fingern gehalten werden.', canAutoDetect:false },
+  { id:'above_table', name:'Über Tischniveau', desc:'Ball über Tischniveau und hinter der Grundlinie', ref:'ITTF 2.06.04', detail:'Der Ball muss sich hinter der Grundlinie und über dem Niveau der Spielfläche befinden.', question:'War der Ball über Tischniveau und hinter der Grundlinie?', hint:'Der Ball muss sich vor dem Wurf über der Tischoberfläche und hinter der Endlinie befinden.', canAutoDetect:false },
+  { id:'toss_vertical', name:'Nahezu senkrecht hochgeworfen', desc:'Ball nahezu senkrecht (max ~30°) ohne Drall geworfen', ref:'ITTF 2.06.02', detail:'Der Ball muss nahezu senkrecht nach oben geworfen werden, ohne Rotation.', question:'Wurde der Ball nahezu senkrecht hochgeworfen (max ~30° Abweichung)?', hint:'Der Ball darf nicht schräg oder zur Seite geworfen werden.', canAutoDetect:false },
+  { id:'toss_height', name:'Mind. 16 cm Wurfhöhe', desc:'Ball steigt nach Verlassen der Hand mind. 16 cm', ref:'ITTF 2.06.02', detail:'16 cm entspricht ungefähr einer Handbreite plus etwas mehr.', question:'Ist der Ball mindestens 16 cm hoch gestiegen?', hint:'Ca. eine Handbreite – der Ball muss deutlich sichtbar aufsteigen.', canAutoDetect:false },
+  { id:'hit_on_fall', name:'Schlag beim Fallen', desc:'Ball erst nach Erreichen des höchsten Punkts geschlagen', ref:'ITTF 2.06.03', detail:'Der Ball darf nicht im Aufstieg oder am höchsten Punkt getroffen werden.', question:'Wurde der Ball erst beim Fallen geschlagen (nicht im Aufstieg)?', hint:'Der Schläger darf den Ball erst treffen, wenn er den höchsten Punkt überschritten hat.', canAutoDetect:false },
+  { id:'visible_opponent', name:'Sichtbar für den Gegner', desc:'Ball vom Hochwerfen bis Schlag immer sichtbar', ref:'ITTF 2.06.05', detail:'Kein Körperteil darf den Ball zwischen Hochwerfen und Schlag verdecken.', question:'War der Ball die ganze Zeit für den Gegner sichtbar?', hint:'Prüfe ob Körper, Arm oder Kleidung den Ball verdeckt haben.', canAutoDetect:true },
+  { id:'not_hidden', name:'Nicht durch Körper verdeckt', desc:'Kein Verdecken durch freien Arm oder Körper', ref:'ITTF 2.06.05', detail:'Der freie Arm muss aus dem Raum zwischen Ball und Netz entfernt werden.', question:'War der Ball frei sichtbar (nicht durch Arm/Körper verdeckt)?', hint:'Der Aufschläger darf den Ball nicht mit dem Körper oder Arm verstecken.', canAutoDetect:true },
+  { id:'hand_removed', name:'Freie Hand entfernt', desc:'Freie Hand nach dem Hochwerfen sofort entfernt', ref:'ITTF 2.06.02', detail:'Die freie Hand muss nach dem Wurf aus dem Bereich zwischen Körper und Netz bewegt werden.', question:'Wurde die freie Hand nach dem Wurf schnell entfernt?', hint:'Die Wurfhand muss sofort aus dem Bereich zwischen Ball und Netz bewegt werden.', canAutoDetect:true }
 ];
 
 // ===== STATE =====
-let stream = null;
-let mediaRecorder = null;
-let recordedChunks = [];
-let isRecording = false;
-let timerInterval = null;
-let timerSeconds = 0;
+let stream = null, mediaRecorder = null, recordedChunks = [];
+let isRecording = false, timerInterval = null, timerSeconds = 0;
 let facingMode = 'environment';
-let ruleStates = {};
-let history = JSON.parse(localStorage.getItem('tt-history') || '[]');
+let currentVideoBlob = null, currentVideoUrl = null;
+let ruleResults = {}; // {ruleId: {ok: bool, source: 'ki'|'manual'}}
+let currentQuestionIndex = 0;
+let manualQuestions = [];
+let currentResult = null;
+let isSaved = false;
 
-// ===== DOM =====
 const $ = id => document.getElementById(id);
+
+// ===== IndexedDB =====
+const DB_NAME = 'tt-serve-check';
+const STORE = 'serves';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath:'id', autoIncrement:true });
+    };
+    r.onsuccess = e => resolve(e.target.result);
+    r.onerror = e => reject(e.target.error);
+  });
+}
+
+async function saveServe(entry) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    const r = store.add(entry);
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  });
+}
+
+async function deleteServe(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getAllServes() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const r = tx.objectStore(STORE).getAll();
+    r.onsuccess = () => resolve(r.result.reverse());
+    r.onerror = () => reject(r.error);
+  });
+}
 
 // ===== CAMERA =====
 async function startCamera() {
   try {
     if (stream) stream.getTracks().forEach(t => t.stop());
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode, width: { ideal: 1280 }, height: { ideal: 960 } },
+      video: { facingMode, width:{ ideal:1280 }, height:{ ideal:960 } },
       audio: false
     });
     $('camera-feed').srcObject = stream;
-  } catch (e) {
-    console.error('Camera error:', e);
-  }
+  } catch (e) { console.error('Camera error:', e); }
 }
 
 // ===== RECORDING =====
 function startRecording() {
   if (!stream) return;
   recordedChunks = [];
-  const options = { mimeType: 'video/webm;codecs=vp9' };
-  try {
-    mediaRecorder = new MediaRecorder(stream, options);
-  } catch {
-    try {
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-    } catch {
-      mediaRecorder = new MediaRecorder(stream);
-    }
-  }
-  mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
-  mediaRecorder.onstop = () => {
-    const blob = new Blob(recordedChunks, { type: 'video/webm' });
-    loadVideoForReview(blob);
+  let mr;
+  try { mr = new MediaRecorder(stream, { mimeType:'video/webm;codecs=vp9' }); }
+  catch { try { mr = new MediaRecorder(stream, { mimeType:'video/webm' }); } catch { mr = new MediaRecorder(stream); } }
+  mediaRecorder = mr;
+  mr.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+  mr.onstop = () => {
+    currentVideoBlob = new Blob(recordedChunks, { type:'video/webm' });
+    startAnalysis();
   };
-  mediaRecorder.start();
+  mr.start();
   isRecording = true;
   $('btn-record').classList.add('recording');
   $('rec-indicator').classList.add('active');
@@ -893,160 +466,428 @@ function updateTimer() {
   $('timer').textContent = `${m}:${s}`;
 }
 
-// ===== VIDEO REVIEW =====
-function loadVideoForReview(blob) {
-  const url = URL.createObjectURL(blob);
-  const video = $('review-video');
-  video.src = url;
-  video.playbackRate = 0.25;
-  video.load();
-  resetChecklist();
-  showScreen('screen-review');
+// ===== ANALYSIS =====
+function setStepState(id, state) {
+  const el = $(id);
+  el.className = `analyze-step ${state}`;
+  const icon = el.querySelector('.step-icon');
+  if (state === 'done') icon.innerHTML = '&#9989;';
+  else if (state === 'active') icon.innerHTML = '&#9899;';
+  else icon.innerHTML = '&#9898;';
 }
 
-// ===== PLAYBACK CONTROLS =====
-$('btn-play-pause').addEventListener('click', () => {
-  const v = $('review-video');
-  if (v.paused) { v.play(); showPauseIcon(); }
-  else { v.pause(); showPlayIcon(); }
+async function startAnalysis() {
+  ruleResults = {};
+  isSaved = false;
+  if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl);
+  currentVideoUrl = URL.createObjectURL(currentVideoBlob);
+
+  showScreen('screen-analyze');
+
+  // Step 1: Load MediaPipe
+  setStepState('step-load', 'active');
+  const loaded = await loadMediaPipe();
+  setStepState('step-load', loaded ? 'done' : 'done');
+
+  if (loaded) {
+    // Step 2: Extract frames
+    setStepState('step-frames', 'active');
+    const frames = await extractFrames(currentVideoUrl, 12);
+    setStepState('step-frames', 'done');
+
+    // Step 3: Pose detection
+    setStepState('step-pose', 'active');
+    const poseData = await analyzePoses(frames);
+    setStepState('step-pose', 'done');
+
+    // Step 4: Evaluate auto-detectable rules
+    setStepState('step-eval', 'active');
+    evaluateKI(poseData);
+    setStepState('step-eval', 'done');
+  } else {
+    setStepState('step-frames', 'done');
+    setStepState('step-pose', 'done');
+    setStepState('step-eval', 'done');
+  }
+
+  await new Promise(r => setTimeout(r, 600));
+
+  // Determine which questions to ask manually
+  manualQuestions = RULES.filter(r => !ruleResults[r.id]);
+  if (manualQuestions.length > 0) {
+    startQuestions();
+  } else {
+    showResultScreen();
+  }
+}
+
+async function extractFrames(url, count) {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+    video.src = url;
+
+    video.onloadedmetadata = async () => {
+      const duration = video.duration;
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 480;
+      const ctx = canvas.getContext('2d');
+      const frames = [];
+
+      for (let i = 0; i < count; i++) {
+        const time = (duration / (count + 1)) * (i + 1);
+        video.currentTime = time;
+        await new Promise(r => { video.onseeked = r; });
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        frames.push({ canvas, time: time * 1000, imageData: ctx.getImageData(0, 0, canvas.width, canvas.height) });
+      }
+      resolve(frames);
+    };
+    video.onerror = () => resolve([]);
+  });
+}
+
+async function analyzePoses(frames) {
+  if (!poseLandmarker || frames.length === 0) return [];
+  const results = [];
+  const canvas = frames[0].canvas;
+
+  for (const frame of frames) {
+    try {
+      const ctx = canvas.getContext('2d');
+      ctx.putImageData(frame.imageData, 0, 0);
+      const result = poseLandmarker.detectForVideo(canvas, frame.time);
+      if (result.landmarks && result.landmarks.length > 0) {
+        results.push({ time: frame.time, landmarks: result.landmarks[0] });
+      }
+    } catch (e) {
+      console.warn('Pose detection error:', e);
+    }
+  }
+  return results;
+}
+
+function evaluateKI(poseData) {
+  if (poseData.length < 3) return;
+
+  // Analyze arm positions across frames
+  // Landmarks: 15=left_wrist, 16=right_wrist, 11=left_shoulder, 12=right_shoulder, 23=left_hip, 24=right_hip
+  const armAnalysis = poseData.map(p => {
+    const lw = p.landmarks[15]; // left wrist
+    const rw = p.landmarks[16]; // right wrist
+    const ls = p.landmarks[11]; // left shoulder
+    const rs = p.landmarks[12]; // right shoulder
+    const nose = p.landmarks[0];
+    const bodyCenter = (ls.x + rs.x) / 2;
+
+    return {
+      time: p.time,
+      leftWristX: lw.x, leftWristY: lw.y,
+      rightWristX: rw.x, rightWristY: rw.y,
+      bodyCenter,
+      noseX: nose.x,
+      // Check if wrists are spread apart (hand removed)
+      wristSpread: Math.abs(lw.x - rw.x),
+      // Check if one arm crosses in front (occlusion)
+      leftArmFront: lw.x > bodyCenter - 0.1 && lw.x < bodyCenter + 0.1,
+      rightArmFront: rw.x > bodyCenter - 0.1 && rw.x < bodyCenter + 0.1,
+    };
+  });
+
+  // Rule: hand_removed - Check if wrists spread apart in later frames
+  const earlySpread = armAnalysis.slice(0, 3).reduce((s, a) => s + a.wristSpread, 0) / 3;
+  const lateSpread = armAnalysis.slice(-4).reduce((s, a) => s + a.wristSpread, 0) / Math.min(4, armAnalysis.slice(-4).length);
+  if (lateSpread > earlySpread * 1.1) {
+    ruleResults['hand_removed'] = { ok: true, source: 'ki', confidence: 70 };
+  }
+
+  // Rule: visible_opponent + not_hidden - Check if arms don't cross in front of body center
+  const occlusionFrames = armAnalysis.filter(a => a.leftArmFront && a.rightArmFront).length;
+  const occlusionRatio = occlusionFrames / armAnalysis.length;
+  if (occlusionRatio < 0.3) {
+    ruleResults['visible_opponent'] = { ok: true, source: 'ki', confidence: 65 };
+    ruleResults['not_hidden'] = { ok: true, source: 'ki', confidence: 65 };
+  } else if (occlusionRatio > 0.5) {
+    ruleResults['visible_opponent'] = { ok: false, source: 'ki', confidence: 60 };
+    ruleResults['not_hidden'] = { ok: false, source: 'ki', confidence: 60 };
+  }
+}
+
+// ===== QUICK QUESTIONS =====
+function startQuestions() {
+  currentQuestionIndex = 0;
+  const qv = $('question-video');
+  qv.src = currentVideoUrl;
+  qv.playbackRate = 0.25;
+  qv.play().catch(() => {});
+  showScreen('screen-questions');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = manualQuestions[currentQuestionIndex];
+  if (!q) { showResultScreen(); return; }
+
+  // Progress dots
+  $('question-progress').innerHTML = manualQuestions.map((_, i) =>
+    `<div class="progress-dot ${i < currentQuestionIndex ? 'done' : i === currentQuestionIndex ? 'current' : ''}"></div>`
+  ).join('');
+
+  $('question-container').innerHTML = `
+    <div class="question-card">
+      <div class="question-badge">Frage ${currentQuestionIndex + 1} von ${manualQuestions.length}</div>
+      <div class="question-text">${q.question}</div>
+      <div class="question-hint">${q.hint}</div>
+      <div class="question-buttons">
+        <button class="q-btn yes" onclick="window._answerQuestion(true)">&#9989; Ja</button>
+        <button class="q-btn no" onclick="window._answerQuestion(false)">&#10060; Nein</button>
+      </div>
+    </div>
+  `;
+}
+
+window._answerQuestion = function(ok) {
+  const q = manualQuestions[currentQuestionIndex];
+  ruleResults[q.id] = { ok, source: 'manual' };
+  currentQuestionIndex++;
+  if (currentQuestionIndex < manualQuestions.length) {
+    renderQuestion();
+  } else {
+    showResultScreen();
+  }
+};
+
+// Question video controls
+$('q-play').addEventListener('click', () => {
+  const v = $('question-video');
+  if (v.paused) { v.play(); $('q-play').innerHTML = '&#9646;&#9646;'; }
+  else { v.pause(); $('q-play').innerHTML = '&#9654;'; }
 });
 
-$('btn-step-back').addEventListener('click', () => {
-  const v = $('review-video');
-  v.pause();
-  v.currentTime = Math.max(0, v.currentTime - 1/30);
-  showPlayIcon();
-});
-
-$('btn-step-forward').addEventListener('click', () => {
-  const v = $('review-video');
-  v.pause();
-  v.currentTime = Math.min(v.duration, v.currentTime + 1/30);
-  showPlayIcon();
-});
-
-function showPlayIcon() { $('icon-play').style.display = ''; $('icon-pause').style.display = 'none'; }
-function showPauseIcon() { $('icon-play').style.display = 'none'; $('icon-pause').style.display = ''; }
-
-// Speed buttons
-document.querySelectorAll('.speed-btn').forEach(btn => {
+document.querySelectorAll('.mini-speed button').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.mini-speed button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    $('review-video').playbackRate = parseFloat(btn.dataset.speed);
+    $('question-video').playbackRate = parseFloat(btn.dataset.speed);
   });
 });
 
-// Timeline
-const timeline = $('video-timeline');
-$('review-video').addEventListener('timeupdate', () => {
-  const v = $('review-video');
-  if (v.duration) timeline.value = (v.currentTime / v.duration) * 1000;
-});
-$('review-video').addEventListener('ended', showPlayIcon);
-timeline.addEventListener('input', () => {
-  const v = $('review-video');
-  if (v.duration) v.currentTime = (timeline.value / 1000) * v.duration;
-});
-
-// ===== CHECKLIST =====
-function resetChecklist() {
-  ruleStates = {};
-  renderChecklist();
-}
-
-function renderChecklist() {
-  const container = $('checklist-container');
-  container.innerHTML = RULES.map((rule, i) => {
-    const state = ruleStates[rule.id] || 'unchecked';
-    const cardClass = state === 'ok' ? 'checked-ok' : state === 'fail' ? 'checked-fail' : '';
-    return `
-      <div class="rule-card ${cardClass}" id="rule-${rule.id}">
-        <div class="rule-header">
-          <div class="rule-number">${state === 'ok' ? '&#10003;' : state === 'fail' ? '&#10007;' : (i+1)}</div>
-          <div class="rule-content">
-            <div class="rule-name">${rule.name}</div>
-            <div class="rule-desc">${rule.desc}</div>
-            <div class="rule-ref">${rule.ref}</div>
-          </div>
-        </div>
-        <div class="rule-buttons">
-          <button class="rule-btn ${state === 'ok' ? 'ok-active' : ''}" onclick="setRule('${rule.id}','ok')">&#10003; Korrekt</button>
-          <button class="rule-btn ${state === 'fail' ? 'fail-active' : ''}" onclick="setRule('${rule.id}','fail')">&#10007; Fehler</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function setRule(id, state) {
-  ruleStates[id] = ruleStates[id] === state ? undefined : state;
-  renderChecklist();
-}
-
-// ===== RESULT =====
-$('btn-show-result').addEventListener('click', showResult);
-
-function showResult() {
+// ===== SCORE & RESULT =====
+function calculateScore() {
   const total = RULES.length;
-  const ok = RULES.filter(r => ruleStates[r.id] === 'ok').length;
-  const fail = RULES.filter(r => ruleStates[r.id] === 'fail').length;
-  const unchecked = total - ok - fail;
+  const ok = RULES.filter(r => ruleResults[r.id] && ruleResults[r.id].ok).length;
+  return Math.max(1, Math.min(10, Math.round(ok / total * 9 + 1)));
+}
 
-  let icon, title, cls;
-  if (fail === 0 && unchecked === 0) {
-    icon = '&#9989;'; title = 'Aufschlag regelkonform!'; cls = 'pass';
-  } else if (fail > 0) {
-    icon = '&#10060;'; title = 'Aufschlag nicht regelkonform'; cls = 'fail';
-  } else {
-    icon = '&#9888;&#65039;'; title = 'Nicht vollständig geprüft'; cls = 'partial';
-  }
+function getScoreInfo(score) {
+  if (score >= 7) return { cls:'pass', colorCls:'score-green', stroke:'#0d9f6e', title:'Aufschlag regelkonform!', sub:'Sehr gut – alle wesentlichen Regeln erfüllt.' };
+  if (score >= 4) return { cls:'partial', colorCls:'score-yellow', stroke:'#dd6b20', title:'Aufschlag teilweise korrekt', sub:'Einige Regelverstöße erkannt – siehe Details.' };
+  return { cls:'fail', colorCls:'score-red', stroke:'#e53e3e', title:'Aufschlag nicht regelkonform', sub:'Mehrere Fehler erkannt – bitte Aufschlag korrigieren.' };
+}
 
-  $('result-icon').innerHTML = icon;
-  $('result-title').textContent = title;
-  $('result-score').textContent = `${ok} von ${total} Regeln erfüllt` + (unchecked > 0 ? ` (${unchecked} nicht geprüft)` : '');
-  $('result-card').className = `result-card ${cls}`;
+function showResultScreen() {
+  const score = calculateScore();
+  const info = getScoreInfo(score);
+  const total = RULES.length;
+  const ok = RULES.filter(r => ruleResults[r.id] && ruleResults[r.id].ok).length;
+  const fail = total - ok;
+
+  // Gauge animation
+  const circumference = 314;
+  const offset = circumference - (score / 10) * circumference;
+  const gf = $('score-gauge-fill');
+  gf.style.strokeDashoffset = circumference;
+  gf.style.stroke = info.stroke;
+
+  $('score-number').textContent = score;
+  $('score-number').className = `score-number ${info.colorCls}`;
+  $('result-title').textContent = info.title;
+  $('result-subtitle').textContent = `${ok} von ${total} Regeln erfüllt`;
+  $('result-card').className = `result-card ${info.cls}`;
 
   let details = '';
   RULES.forEach(rule => {
-    const s = ruleStates[rule.id];
-    const ico = s === 'ok' ? '&#9989;' : s === 'fail' ? '&#10060;' : '&#11035;';
-    details += `<div class="result-item"><span class="icon">${ico}</span> ${rule.name}</div>`;
+    const r = ruleResults[rule.id];
+    const ico = r ? (r.ok ? '&#9989;' : '&#10060;') : '&#11035;';
+    const badge = r && r.source === 'ki' ? `<span class="ki-badge">KI</span>` : '';
+    const failHint = r && !r.ok ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px">${rule.desc}</div>` : '';
+    details += `<div class="result-item"><span class="icon">${ico}</span><span>${rule.name}${failHint}</span>${badge}</div>`;
   });
   $('result-details').innerHTML = details;
 
-  // Save to history
-  const entry = {
+  // Save button state
+  isSaved = false;
+  $('btn-save').innerHTML = '&#128190; Speichern';
+  $('btn-save').className = 'btn-action btn-save';
+
+  // Store current result
+  currentResult = {
     date: new Date().toLocaleString('de-DE'),
-    ok, fail, unchecked, total,
-    pass: fail === 0 && unchecked === 0,
-    rules: { ...ruleStates }
+    timestamp: Date.now(),
+    score, ok, fail, total,
+    rules: { ...ruleResults },
+    videoBlob: currentVideoBlob
   };
-  history.unshift(entry);
-  if (history.length > 50) history.pop();
-  localStorage.setItem('tt-history', JSON.stringify(history));
 
   showScreen('screen-result');
+
+  // Animate gauge
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    gf.style.strokeDashoffset = offset;
+  }));
 }
 
-// ===== HISTORY =====
-function renderHistory() {
-  const list = $('history-list');
-  if (history.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="icon">&#127955;</div><p>Noch keine Aufschläge analysiert.</p></div>';
-    return;
+// ===== ACTION BUTTONS =====
+$('btn-save').addEventListener('click', async () => {
+  if (isSaved) return;
+  try {
+    await saveServe(currentResult);
+    isSaved = true;
+    $('btn-save').innerHTML = '&#9989; Gespeichert';
+    $('btn-save').className = 'btn-action btn-save saved';
+  } catch (e) { console.error('Save error:', e); }
+});
+
+$('btn-whatsapp').addEventListener('click', async () => {
+  const r = currentResult;
+  const failedRules = RULES.filter(rule => ruleResults[rule.id] && !ruleResults[rule.id].ok).map(rule => `❌ ${rule.name}`);
+  const passedRules = RULES.filter(rule => ruleResults[rule.id] && ruleResults[rule.id].ok).map(rule => `✅ ${rule.name}`);
+
+  let text = `🏓 *TT Aufschlag-Check*\n\n`;
+  text += `Score: *${r.score}/10* ${r.score >= 7 ? '✅' : r.score >= 4 ? '⚠️' : '❌'}\n\n`;
+  if (failedRules.length > 0) text += `Fehler:\n${failedRules.join('\n')}\n\n`;
+  if (passedRules.length > 0) text += `Korrekt:\n${passedRules.join('\n')}\n`;
+
+  // Try Web Share API with video
+  if (navigator.share && currentVideoBlob) {
+    try {
+      const file = new File([currentVideoBlob], 'aufschlag.webm', { type: 'video/webm' });
+      await navigator.share({ text, files: [file] });
+      return;
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        // Fallback: try sharing without video
+        try { await navigator.share({ text }); return; } catch {}
+      } else return;
+    }
   }
-  list.innerHTML = history.map((h, i) => `
-    <div class="history-item">
-      <div class="history-icon">${h.pass ? '&#9989;' : '&#10060;'}</div>
-      <div class="history-info">
-        <strong>Aufschlag #${history.length - i}</strong>
-        <span>${h.date} &bull; ${h.ok}/${h.total} korrekt</span>
-      </div>
-      <div class="history-score ${h.pass ? 'pass' : 'fail'}">${h.pass ? 'OK' : 'Fehler'}</div>
-    </div>
-  `).join('');
+  // Final fallback: WhatsApp URL
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+});
+
+$('btn-delete').addEventListener('click', () => {
+  showConfirm('Aufschlag verwerfen?', 'Das Ergebnis und das Video werden nicht gespeichert.', () => {
+    currentVideoBlob = null;
+    currentResult = null;
+    showScreen('screen-record');
+  });
+});
+
+$('btn-new').addEventListener('click', () => {
+  if (!isSaved) {
+    showConfirm('Ohne Speichern fortfahren?', 'Das aktuelle Ergebnis wurde noch nicht gespeichert.', () => {
+      showScreen('screen-record');
+      startCamera();
+    });
+  } else {
+    showScreen('screen-record');
+    startCamera();
+  }
+});
+
+// ===== CONFIRM DIALOG =====
+let confirmCallback = null;
+function showConfirm(title, text, onOk) {
+  $('confirm-title').textContent = title;
+  $('confirm-text').textContent = text;
+  confirmCallback = onOk;
+  $('confirm-overlay').style.display = 'flex';
 }
+$('confirm-cancel').addEventListener('click', () => { $('confirm-overlay').style.display = 'none'; });
+$('confirm-ok').addEventListener('click', () => {
+  $('confirm-overlay').style.display = 'none';
+  if (confirmCallback) confirmCallback();
+});
+
+// ===== HISTORY =====
+async function renderHistory() {
+  const list = $('history-list');
+  try {
+    const serves = await getAllServes();
+    if (serves.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="icon">&#127955;</div><p>Noch keine Aufschläge gespeichert.</p></div>';
+      return;
+    }
+    list.innerHTML = serves.map(h => {
+      const s = h.score || 1;
+      const colorCls = s >= 7 ? 'pass' : s >= 4 ? 'partial' : 'fail';
+      const icon = s >= 7 ? '&#9989;' : s >= 4 ? '&#9888;&#65039;' : '&#10060;';
+      return `
+        <div class="history-item">
+          <div class="history-icon">${icon}</div>
+          <div class="history-info">
+            <strong>Score: ${s}/10</strong>
+            <span>${h.date} &bull; ${h.ok}/${h.total} korrekt</span>
+          </div>
+          <div class="history-actions">
+            ${h.videoBlob ? `<button class="history-btn" onclick="window._replayServe(${h.id})" title="Video abspielen">&#9654;</button>` : ''}
+            <button class="history-btn" onclick="window._shareServe(${h.id})" title="Teilen">&#128172;</button>
+            <button class="history-btn delete" onclick="window._deleteServe(${h.id})" title="Löschen">&#128465;</button>
+          </div>
+          <div class="history-score ${colorCls}">${s}/10</div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="empty-state"><p>Fehler beim Laden des Verlaufs.</p></div>';
+  }
+}
+
+window._deleteServe = async function(id) {
+  showConfirm('Eintrag löschen?', 'Dieser Aufschlag wird unwiderruflich gelöscht.', async () => {
+    await deleteServe(id);
+    renderHistory();
+  });
+};
+
+window._replayServe = async function(id) {
+  const db = await openDB();
+  const tx = db.transaction(STORE, 'readonly');
+  const r = tx.objectStore(STORE).get(id);
+  r.onsuccess = () => {
+    const serve = r.result;
+    if (serve && serve.videoBlob) {
+      const url = URL.createObjectURL(serve.videoBlob);
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.write(`<html><head><title>Aufschlag #${id}</title><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh}video{max-width:100%;max-height:100vh}</style></head><body><video src="${url}" controls autoplay playsinline></video></body></html>`);
+      }
+    }
+  };
+};
+
+window._shareServe = async function(id) {
+  const db = await openDB();
+  const tx = db.transaction(STORE, 'readonly');
+  const r = tx.objectStore(STORE).get(id);
+  r.onsuccess = async () => {
+    const h = r.result;
+    if (!h) return;
+    const failedRules = RULES.filter(rule => h.rules[rule.id] && !h.rules[rule.id].ok).map(rule => `❌ ${rule.name}`);
+    let text = `🏓 TT Aufschlag-Check\nScore: ${h.score}/10\n`;
+    if (failedRules.length > 0) text += `\nFehler:\n${failedRules.join('\n')}`;
+
+    if (navigator.share && h.videoBlob) {
+      try {
+        const file = new File([h.videoBlob], 'aufschlag.webm', { type:'video/webm' });
+        await navigator.share({ text, files:[file] });
+        return;
+      } catch {}
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+};
 
 // ===== RULES REFERENCE =====
 function renderRulesReference() {
@@ -1068,11 +909,10 @@ function renderRulesReference() {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => {
-    n.classList.toggle('active', n.dataset.screen === id);
-  });
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.screen === id));
   if (id === 'screen-history') renderHistory();
   if (id === 'screen-record') startCamera();
+  window.scrollTo(0, 0);
 }
 
 document.querySelectorAll('.nav-item').forEach(btn => {
@@ -1081,26 +921,18 @@ document.querySelectorAll('.nav-item').forEach(btn => {
 
 // ===== BUTTON HANDLERS =====
 $('btn-record').addEventListener('click', () => {
-  if (isRecording) stopRecording();
-  else startRecording();
+  if (isRecording) stopRecording(); else startRecording();
 });
-
 $('btn-flip').addEventListener('click', () => {
   facingMode = facingMode === 'environment' ? 'user' : 'environment';
   startCamera();
 });
-
 $('btn-upload-trigger').addEventListener('click', () => $('file-input').click());
-
 $('file-input').addEventListener('change', e => {
   const file = e.target.files[0];
-  if (file) loadVideoForReview(file);
+  if (file) { currentVideoBlob = file; startAnalysis(); }
   e.target.value = '';
 });
-
-$('btn-back-to-record').addEventListener('click', () => showScreen('screen-record'));
-$('btn-back-to-review').addEventListener('click', () => showScreen('screen-review'));
-$('btn-new-serve').addEventListener('click', () => showScreen('screen-record'));
 
 // ===== INIT =====
 renderRulesReference();
