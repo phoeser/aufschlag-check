@@ -264,7 +264,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
     <div class="action-grid">
       <button class="btn-action btn-save" id="btn-save">&#128190; Speichern</button>
-      <button class="btn-action btn-whatsapp" id="btn-whatsapp">&#128172; WhatsApp</button>
+      <button class="btn-action btn-whatsapp" id="btn-whatsapp">&#128228; Teilen</button>
       <button class="btn-action btn-delete" id="btn-delete">&#128465; Verwerfen</button>
       <button class="btn-action btn-new" id="btn-new">&#127955; Neu</button>
     </div>
@@ -330,7 +330,7 @@ const $ = id => document.getElementById(id);
 
 // ===== RULES =====
 const RULES = [
-  { id:'open_hand', name:'Offene, flache Hand', ref:'ITTF 2.06.01', detail:'Ball muss frei und ruhig auf der geöffneten, flachen Handfläche liegen. Finger müssen gestreckt und zusammen sein. Der Ball darf NICHT in der Hand gehalten, geklemmt oder von Fingern umschlossen werden.' },
+  { id:'open_hand', name:'Offene, flache Hand', ref:'ITTF 2.06.01', detail:'Der Ball muss frei und ruhig auf der GEÖFFNETEN, FLACHEN Handfläche liegen — mit gestreckten, zusammengelegten Fingern. PRÜFMETHODE: Schaue auf den Moment DIREKT VOR dem Hochwerfen. Die Handfläche muss nach oben zeigen und FLACH sein (nicht gewölbt). Alle Finger müssen sichtbar gestreckt und zusammen sein. Der Ball muss OBEN AUF der offenen Hand liegen, nicht von Fingern gehalten oder eingeklemmt werden. TYPISCHE VERSTÖSSE: (1) Ball wird in der geschlossenen Faust oder zwischen den Fingern gehalten, (2) Finger sind gekrümmt um den Ball, (3) Ball liegt in einer gewölbten/hohlen Hand, (4) Ball wird direkt aus den Fingern hochgeschnippt statt von der offenen Fläche geworfen, (5) Daumen hält den Ball von oben fest. Wenn die Hand nicht klar flach und offen erkennbar ist → REGELBRUCH.' },
   { id:'above_table', name:'Über Tischniveau & hinter Grundlinie', ref:'ITTF 2.06.04', detail:'Der Ball muss sich beim Hochwerfen oberhalb der Spielfläche befinden UND hinter der Grundlinie (Tischkante) des Aufschlägers. Der Ball darf sich NICHT über dem Tisch oder vor der Grundlinie befinden.' },
   { id:'toss_vertical', name:'Nahezu senkrecht hochgeworfen', ref:'ITTF 2.06.02', detail:'Der Ball muss nahezu senkrecht nach oben geworfen werden (max. 30° Abweichung von der Vertikalen). PRÜFMETHODE: Vergleiche die Position des Balls beim Verlassen der Hand mit der Position am höchsten Punkt. Zeichne eine gedachte senkrechte Linie von der Abwurfposition nach oben. Wenn der Ball am Scheitelpunkt HORIZONTAL mehr als die Hälfte der Wurfhöhe von dieser Linie entfernt ist, beträgt die Abweichung mehr als 30° → REGELBRUCH. BESONDERS WICHTIG: Würfe nach HINTEN (vom Aufschläger weg, über seinen Kopf/Schulter) sind genauso verboten wie Würfe nach vorne oder zur Seite! Wenn der Ball nach hinten über die Hand/den Arm wandert, ist das ein deutlicher Verstoß. Auch ein Ball der nur leicht nach hinten fliegt und dann zurückfällt hat einen zu großen Winkel.' },
   { id:'toss_height', name:'Mind. 16 cm Wurfhöhe', ref:'ITTF 2.06.02', detail:'Der Ball muss nach Verlassen der Hand mindestens 16 cm (ca. 4 Ballbreiten) aufsteigen. STRENG PRÜFEN: Vergleiche die Wurfhöhe mit dem Balldurchmesser (4 cm). Der Ball muss deutlich sichtbar mindestens 4 Balldurchmesser hoch steigen. Ein nur wenige Zentimeter hoher Wurf ist NICHT regelkonform.' },
@@ -660,6 +660,7 @@ ${ruleList}
 
 ANALYSE-ANWEISUNGEN:
 - Analysiere das Video Frame für Frame. Achte auf die GESAMTE Aufschlagbewegung vom Hochwerfen bis zum Schlag.
+- OFFENE HAND (STRENG PRÜFEN): Fokussiere auf den Moment DIREKT VOR dem Wurf. Die Handfläche muss flach nach oben zeigen mit gestreckten Fingern. Der Ball muss frei OBEN AUF der Hand liegen. Wenn der Ball zwischen Fingern eingeklemmt ist, aus einer Faust geworfen wird, die Hand gewölbt/hohl ist, oder der Ball aus den Fingern geschnippt wird → REGELBRUCH. Viele Spieler halten den Ball versteckt in der Hand oder werfen aus halbgeschlossener Hand — das ist NICHT erlaubt.
 - WURFHÖHE: Schätze die Wurfhöhe anhand des Balldurchmessers (4 cm). Der Ball muss MINDESTENS 4 Balldurchmesser (16 cm) über die Hand steigen. Wenn der Wurf knapp aussieht, ist er NICHT regelkonform.
 - SENKRECHTER WURF (BESONDERS STRENG PRÜFEN):
   1. Markiere mental die Ballposition beim Verlassen der Hand (Abwurfpunkt).
@@ -897,20 +898,28 @@ $('btn-save').addEventListener('click', async () => {
 
 $('btn-whatsapp').addEventListener('click', async () => {
   const r = currentResult;
-  const failedRules = RULES.filter(rule => r.rules[rule.id] && !r.rules[rule.id].ok);
-  const passedRules = RULES.filter(rule => r.rules[rule.id] && r.rules[rule.id].ok);
+  const failedRules = RULES.filter(rule => r.rules[rule.id] && r.rules[rule.id].ok === false);
+  const passedRules = RULES.filter(rule => r.rules[rule.id] && r.rules[rule.id].ok === true);
+  const naRules = RULES.filter(rule => r.rules[rule.id] && r.rules[rule.id].ok === 'na');
   const ev = r.evaluated || r.total;
   const emoji = r.ok === ev ? '\u2705' : r.ok >= ev - 1 ? '\ud83d\udc4d' : r.ok >= ev - 3 ? '\u26a0\ufe0f' : '\u274c';
   let text = `\ud83c\udfd3 *TT Aufschlag-Check*\n\nErgebnis: *${r.ok}/${ev} Regeln* ${emoji}${r.na ? ` (${r.na} nicht prüfbar)` : ''}\n`;
   if (failedRules.length > 0) text += `\nFehler:\n${failedRules.map(r2 => `\u274c ${r2.name}`).join('\n')}\n`;
   if (passedRules.length > 0) text += `\nKorrekt:\n${passedRules.map(r2 => `\u2705 ${r2.name}`).join('\n')}\n`;
+  if (naRules.length > 0) text += `\nNicht prüfbar:\n${naRules.map(r2 => `\u2753 ${r2.name}`).join('\n')}\n`;
   if (r.summary) text += `\n${r.summary}`;
+  text += `\n\n\ud83d\udc49 Teste deinen Aufschlag: https://phoeser.github.io/aufschlag-check/`;
 
-  if (navigator.share && currentVideoBlob) {
+  if (navigator.share) {
     try {
-      const file = new File([currentVideoBlob], 'aufschlag.webm', {type:'video/webm'});
-      await navigator.share({text, files:[file]}); return;
-    } catch(e) { if (e.name === 'AbortError') return; try { await navigator.share({text}); return; } catch {} }
+      const shareData = { text };
+      if (currentVideoBlob) {
+        const ext = currentVideoBlob.type.includes('mp4') ? 'mp4' : 'webm';
+        const file = new File([currentVideoBlob], `aufschlag.${ext}`, {type: currentVideoBlob.type});
+        shareData.files = [file];
+      }
+      await navigator.share(shareData); return;
+    } catch(e) { if (e.name === 'AbortError') return; }
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
 });
