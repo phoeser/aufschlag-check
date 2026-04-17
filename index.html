@@ -332,7 +332,7 @@ const $ = id => document.getElementById(id);
 const RULES = [
   { id:'open_hand', name:'Offene, flache Hand', ref:'ITTF 2.06.01', detail:'Ball muss frei und ruhig auf der geöffneten, flachen Handfläche liegen. Finger müssen gestreckt und zusammen sein. Der Ball darf NICHT in der Hand gehalten, geklemmt oder von Fingern umschlossen werden.' },
   { id:'above_table', name:'Über Tischniveau & hinter Grundlinie', ref:'ITTF 2.06.04', detail:'Der Ball muss sich beim Hochwerfen oberhalb der Spielfläche befinden UND hinter der Grundlinie (Tischkante) des Aufschlägers. Der Ball darf sich NICHT über dem Tisch oder vor der Grundlinie befinden.' },
-  { id:'toss_vertical', name:'Nahezu senkrecht hochgeworfen', ref:'ITTF 2.06.02', detail:'Der Ball muss nahezu senkrecht nach oben geworfen werden (max. 30° Abweichung von der Vertikalen). Schräge Würfe nach vorne, hinten oder zur Seite sind VERBOTEN. Achte auf die Flugbahn des Balls.' },
+  { id:'toss_vertical', name:'Nahezu senkrecht hochgeworfen', ref:'ITTF 2.06.02', detail:'Der Ball muss nahezu senkrecht nach oben geworfen werden (max. 30° Abweichung von der Vertikalen). PRÜFMETHODE: Vergleiche die Position des Balls beim Verlassen der Hand mit der Position am höchsten Punkt. Zeichne eine gedachte senkrechte Linie von der Abwurfposition nach oben. Wenn der Ball am Scheitelpunkt HORIZONTAL mehr als die Hälfte der Wurfhöhe von dieser Linie entfernt ist, beträgt die Abweichung mehr als 30° → REGELBRUCH. BESONDERS WICHTIG: Würfe nach HINTEN (vom Aufschläger weg, über seinen Kopf/Schulter) sind genauso verboten wie Würfe nach vorne oder zur Seite! Wenn der Ball nach hinten über die Hand/den Arm wandert, ist das ein deutlicher Verstoß. Auch ein Ball der nur leicht nach hinten fliegt und dann zurückfällt hat einen zu großen Winkel.' },
   { id:'toss_height', name:'Mind. 16 cm Wurfhöhe', ref:'ITTF 2.06.02', detail:'Der Ball muss nach Verlassen der Hand mindestens 16 cm (ca. 4 Ballbreiten) aufsteigen. STRENG PRÜFEN: Vergleiche die Wurfhöhe mit dem Balldurchmesser (4 cm). Der Ball muss deutlich sichtbar mindestens 4 Balldurchmesser hoch steigen. Ein nur wenige Zentimeter hoher Wurf ist NICHT regelkonform.' },
   { id:'hit_on_fall', name:'Schlag beim Fallen', ref:'ITTF 2.06.03', detail:'Der Ball darf ERST geschlagen werden, nachdem er seinen höchsten Punkt erreicht hat und wieder fällt. Ein Schlag am oder vor dem höchsten Punkt ist VERBOTEN. Achte darauf, ob der Ball einen klaren Scheitelpunkt erreicht bevor der Schläger ihn trifft.' },
   { id:'visible_opponent', name:'Sichtbar für den Gegner', ref:'ITTF 2.06.05', detail:'Der Ball muss vom Moment des Hochwerfens bis zum Schlag jederzeit für den Gegner (Rückschläger) sichtbar sein. Er darf zu KEINEM Zeitpunkt verdeckt werden.' },
@@ -661,7 +661,14 @@ ${ruleList}
 ANALYSE-ANWEISUNGEN:
 - Analysiere das Video Frame für Frame. Achte auf die GESAMTE Aufschlagbewegung vom Hochwerfen bis zum Schlag.
 - WURFHÖHE: Schätze die Wurfhöhe anhand des Balldurchmessers (4 cm). Der Ball muss MINDESTENS 4 Balldurchmesser (16 cm) über die Hand steigen. Wenn der Wurf knapp aussieht, ist er NICHT regelkonform.
-- SENKRECHTER WURF: Verfolge die Flugbahn. Jede sichtbare seitliche oder nach-vorne-Bewegung ist ein Verstoß.
+- SENKRECHTER WURF (BESONDERS STRENG PRÜFEN):
+  1. Markiere mental die Ballposition beim Verlassen der Hand (Abwurfpunkt).
+  2. Markiere die Ballposition am höchsten Punkt (Scheitelpunkt).
+  3. Der Scheitelpunkt muss DIREKT ÜBER dem Abwurfpunkt liegen.
+  4. Wenn der Ball am Scheitelpunkt horizontal versetzt ist (nach vorne, HINTEN, links oder rechts), ist der Wurf NICHT senkrecht.
+  5. RÜCKWÄRTSWÜRFE ERKENNEN: Wenn der Ball nach hinten über die Hand/Schulter des Spielers wandert, ist das ein klarer Verstoß! Der Ball darf sich NICHT nach hinten zum Körper des Aufschlägers bewegen.
+  6. Faustregel: Ist die horizontale Verschiebung mehr als ein halber Balldurchmesser (2 cm) bei einem 16cm-Wurf, liegt die Abweichung wahrscheinlich über 30°.
+  7. Im Zweifel ist der Wurf NICHT senkrecht genug.
 - VERDECKEN: Prüfe ob Schulter, Arm oder Oberkörper den Ball zu irgendeinem Zeitpunkt verdecken — auch teilweise.
 - SCHLAG BEIM FALLEN: Der Ball muss einen KLAREN Scheitelpunkt haben und sichtbar fallen, bevor der Schläger zuschlägt.
 - Bewerte jede Regel einzeln als korrekt (true) oder fehlerhaft (false).
