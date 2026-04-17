@@ -138,6 +138,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .history-actions{display:flex;gap:6px}
 .history-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
 .history-btn.delete{color:var(--danger)}
+.history-actions{display:flex;gap:6px}
+.history-detail{display:none;padding:12px 14px;border-top:1px solid var(--border);background:var(--surface2);border-radius:0 0 var(--radius) var(--radius)}
+.history-detail.open{display:block}
+.history-detail-rule{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px}
+.history-detail-rule .icon{font-size:16px}
+.history-detail-summary{font-size:12px;color:var(--text-muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic}
+.history-video{width:100%;max-height:240px;border-radius:8px;margin-bottom:8px;background:#000}
+.history-item-wrap{margin-bottom:8px}
 .empty-state{text-align:center;padding:48px 20px;color:var(--text-muted)}
 .empty-state .icon{font-size:48px;margin-bottom:12px;opacity:.5}
 
@@ -330,10 +338,10 @@ const $ = id => document.getElementById(id);
 
 // ===== RULES =====
 const RULES = [
-  { id:'open_hand', name:'Offene, flache Hand', ref:'ITTF 2.06.01', detail:'Der Ball muss frei und ruhig auf der GEÖFFNETEN, FLACHEN Handfläche liegen — mit gestreckten, zusammengelegten Fingern. PRÜFMETHODE: Schaue auf den Moment DIREKT VOR dem Hochwerfen. Die Handfläche muss nach oben zeigen und FLACH sein (nicht gewölbt). Alle Finger müssen sichtbar gestreckt und zusammen sein. Der Ball muss OBEN AUF der offenen Hand liegen, nicht von Fingern gehalten oder eingeklemmt werden. TYPISCHE VERSTÖSSE: (1) Ball wird in der geschlossenen Faust oder zwischen den Fingern gehalten, (2) Finger sind gekrümmt um den Ball, (3) Ball liegt in einer gewölbten/hohlen Hand, (4) Ball wird direkt aus den Fingern hochgeschnippt statt von der offenen Fläche geworfen, (5) Daumen hält den Ball von oben fest. Wenn die Hand nicht klar flach und offen erkennbar ist → REGELBRUCH.' },
+  { id:'open_hand', name:'Offene, flache Hand', ref:'ITTF 2.06.01', detail:'Der Ball soll auf der geöffneten Handfläche liegen. MILDE BEWERTUNG: Die Hand muss nicht perfekt flach sein — leicht gewölbt oder leicht gekrümmte Finger sind akzeptabel, solange der Ball sichtbar auf der Handfläche liegt und nicht in der geschlossenen Faust gehalten oder zwischen Fingern eingeklemmt wird. Nur bei klar geschlossener Hand oder offensichtlichem Einklemmen ist dies ein Verstoß.' },
   { id:'above_table', name:'Über Tischniveau & hinter Grundlinie', ref:'ITTF 2.06.04', detail:'Der Ball muss sich beim Hochwerfen oberhalb der Spielfläche befinden UND hinter der Grundlinie (Tischkante) des Aufschlägers. Der Ball darf sich NICHT über dem Tisch oder vor der Grundlinie befinden.' },
   { id:'toss_vertical', name:'Nahezu senkrecht hochgeworfen', ref:'ITTF 2.06.02', detail:'Der Ball muss nahezu senkrecht nach oben geworfen werden (max. 30° Abweichung von der Vertikalen). PRÜFMETHODE: Vergleiche die Position des Balls beim Verlassen der Hand mit der Position am höchsten Punkt. Zeichne eine gedachte senkrechte Linie von der Abwurfposition nach oben. Wenn der Ball am Scheitelpunkt HORIZONTAL mehr als die Hälfte der Wurfhöhe von dieser Linie entfernt ist, beträgt die Abweichung mehr als 30° → REGELBRUCH. BESONDERS WICHTIG: Würfe nach HINTEN (vom Aufschläger weg, über seinen Kopf/Schulter) sind genauso verboten wie Würfe nach vorne oder zur Seite! Wenn der Ball nach hinten über die Hand/den Arm wandert, ist das ein deutlicher Verstoß. Auch ein Ball der nur leicht nach hinten fliegt und dann zurückfällt hat einen zu großen Winkel.' },
-  { id:'toss_height', name:'Mind. 16 cm Wurfhöhe', ref:'ITTF 2.06.02', detail:'Der Ball muss nach Verlassen der Hand mindestens 16 cm (ca. 4 Ballbreiten) aufsteigen. STRENG PRÜFEN: Vergleiche die Wurfhöhe mit dem Balldurchmesser (4 cm). Der Ball muss deutlich sichtbar mindestens 4 Balldurchmesser hoch steigen. Ein nur wenige Zentimeter hoher Wurf ist NICHT regelkonform.' },
+  { id:'toss_height', name:'Sichtbar hochgeworfen', ref:'ITTF 2.06.02', detail:'Der Ball muss sichtbar hochgeworfen werden. PRAXISNAHE BEWERTUNG: Der Ball sollte mindestens ca. 10 cm (ca. 2,5 Balldurchmesser) über die Hand steigen. Wichtig ist, dass ein klarer Hochwurf erkennbar ist — der Ball darf nicht nur minimal angehoben oder direkt aus der Hand geschlagen werden. Ein deutlich sichtbarer Wurf nach oben reicht aus.' },
   { id:'hit_on_fall', name:'Schlag beim Fallen', ref:'ITTF 2.06.03', detail:'Der Ball darf ERST geschlagen werden, nachdem er seinen höchsten Punkt erreicht hat und wieder fällt. Ein Schlag am oder vor dem höchsten Punkt ist VERBOTEN. Achte darauf, ob der Ball einen klaren Scheitelpunkt erreicht bevor der Schläger ihn trifft.' },
   { id:'visible_opponent', name:'Sichtbar für den Gegner', ref:'ITTF 2.06.05', detail:'Der Ball muss vom Moment des Hochwerfens bis zum Schlag jederzeit für den Gegner (Rückschläger) sichtbar sein. Er darf zu KEINEM Zeitpunkt verdeckt werden.' },
   { id:'not_hidden', name:'Nicht durch Körper verdeckt', ref:'ITTF 2.06.05', detail:'Der Aufschläger darf den Ball NICHT mit irgendeinem Körperteil oder Kleidung verdecken. Besonders der freie Arm, die Schulter oder der Oberkörper dürfen den Ball nicht zwischen Hochwerfen und Schlag verbergen. STRENG PRÜFEN: Auch teilweises Verdecken ist ein Verstoß.' },
@@ -660,8 +668,8 @@ ${ruleList}
 
 ANALYSE-ANWEISUNGEN:
 - Analysiere das Video Frame für Frame. Achte auf die GESAMTE Aufschlagbewegung vom Hochwerfen bis zum Schlag.
-- OFFENE HAND (STRENG PRÜFEN): Fokussiere auf den Moment DIREKT VOR dem Wurf. Die Handfläche muss flach nach oben zeigen mit gestreckten Fingern. Der Ball muss frei OBEN AUF der Hand liegen. Wenn der Ball zwischen Fingern eingeklemmt ist, aus einer Faust geworfen wird, die Hand gewölbt/hohl ist, oder der Ball aus den Fingern geschnippt wird → REGELBRUCH. Viele Spieler halten den Ball versteckt in der Hand oder werfen aus halbgeschlossener Hand — das ist NICHT erlaubt.
-- WURFHÖHE: Schätze die Wurfhöhe anhand des Balldurchmessers (4 cm). Der Ball muss MINDESTENS 4 Balldurchmesser (16 cm) über die Hand steigen. Wenn der Wurf knapp aussieht, ist er NICHT regelkonform.
+- OFFENE HAND (MILDE BEWERTUNG): Prüfe ob der Ball auf der Handfläche liegt. Leicht gewölbte Hand oder nicht ganz gestreckte Finger sind OK — das ist praxisnah. Nur bei KLAR geschlossener Faust oder wenn der Ball offensichtlich eingeklemmt/gehalten wird, ist es ein Verstoß.
+- WURFHÖHE (PRAXISNAHE BEWERTUNG): Schätze die Wurfhöhe anhand des Balldurchmessers (4 cm). Der Ball muss mindestens ca. 2,5 Balldurchmesser (10 cm) sichtbar über die Hand steigen. Wichtig ist ein klarer, sichtbarer Hochwurf — kein minimales Anheben oder direktes Schlagen aus der Hand.
 - SENKRECHTER WURF (BESONDERS STRENG PRÜFEN):
   1. Markiere mental die Ballposition beim Verlassen der Hand (Abwurfpunkt).
   2. Markiere die Ballposition am höchsten Punkt (Scheitelpunkt).
@@ -949,34 +957,94 @@ async function renderHistory() {
     const serves = await getAllServes();
     if (serves.length === 0) { list.innerHTML = '<div class="empty-state"><div class="icon">&#127955;</div><p>Noch keine Aufschl\u00e4ge gespeichert.</p></div>'; return; }
     list.innerHTML = serves.map(h => {
-      const s = h.score || 1;
-      const ok = h.ok; const ev = h.evaluated || h.total; const hna = h.na || 0;
+      const ok = h.ok || 0; const ev = h.evaluated || h.total || 8; const hna = h.na || 0;
       const cls = ok === ev ? 'pass' : ok >= ev - 1 ? 'good' : ok >= ev - 3 ? 'partial' : ok >= ev - 5 ? 'poor' : 'fail';
       const ico = ok === ev ? '&#9989;' : ok >= ev - 1 ? '&#128077;' : ok >= ev - 3 ? '&#9888;&#65039;' : '&#10060;';
-      return `<div class="history-item">
-        <div class="history-icon">${ico}</div>
-        <div class="history-info"><strong>${ok}/${ev} Regeln</strong><span>${h.date}${hna ? ` \u2022 ${hna} nicht pr\u00fcfbar` : ''}</span></div>
-        <div class="history-actions">
-          ${h.videoBlob ? `<button class="history-btn" onclick="_replayServe(${h.id})">&#9654;</button>` : ''}
-          <button class="history-btn" onclick="_shareServe(${h.id})">&#128172;</button>
-          <button class="history-btn delete" onclick="_deleteServe(${h.id})">&#128465;</button>
+      let detailHtml = '';
+      if (h.rules) {
+        const ruleEntries = RULES.map(rule => {
+          const rd = h.rules[rule.id];
+          if (!rd) return '';
+          const rIco = rd.ok === 'na' ? '&#10067;' : rd.ok ? '&#9989;' : '&#10060;';
+          return `<div class="history-detail-rule"><span class="icon">${rIco}</span> ${rule.name}</div>`;
+        }).join('');
+        detailHtml = ruleEntries;
+        if (h.summary) detailHtml += `<div class="history-detail-summary">${h.summary}</div>`;
+      }
+      return `<div class="history-item-wrap" id="hw-${h.id}">
+        <div class="history-item" onclick="_toggleDetail(${h.id})" style="cursor:pointer">
+          <div class="history-icon">${ico}</div>
+          <div class="history-info"><strong>${ok}/${ev} Regeln</strong><span>${h.date}${hna ? ` \u2022 ${hna} nicht pr\u00fcfbar` : ''}</span></div>
+          <div class="history-actions">
+            <button class="history-btn" onclick="event.stopPropagation();_shareServe(${h.id})">&#128228;</button>
+            <button class="history-btn delete" onclick="event.stopPropagation();_deleteServe(${h.id})">&#128465;</button>
+          </div>
+          <div class="history-score ${cls}">${ok}/${ev}</div>
         </div>
-        <div class="history-score ${cls}">${ok}/${ev}</div>
+        <div class="history-detail" id="hd-${h.id}">
+          <div id="hv-${h.id}"></div>
+          ${detailHtml}
+        </div>
       </div>`;
     }).join('');
-  } catch { list.innerHTML = '<div class="empty-state"><p>Fehler beim Laden.</p></div>'; }
+  } catch(e) { console.error(e); list.innerHTML = '<div class="empty-state"><p>Fehler beim Laden.</p></div>'; }
 }
 
-window._deleteServe = id => showConfirm('Eintrag l\u00f6schen?', 'Unwiderruflich.', async () => { await deleteServe(id); renderHistory(); });
-window._replayServe = async id => {
-  const db = await openDB(); const tx = db.transaction(STORE,'readonly'); const r = tx.objectStore(STORE).get(id);
-  r.onsuccess = () => { const s = r.result; if(s?.videoBlob) { const u = URL.createObjectURL(s.videoBlob); const w = window.open('','_blank'); if(w) w.document.write(`<html><head><title>Aufschlag</title><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh}video{max-width:100%;max-height:100vh}</style></head><body><video src="${u}" controls autoplay playsinline></video></body></html>`); } };
+window._toggleDetail = id => {
+  const det = $('hd-' + id);
+  const wasOpen = det.classList.contains('open');
+  // Close all open details
+  document.querySelectorAll('.history-detail.open').forEach(d => { d.classList.remove('open'); const vid = d.querySelector('video'); if(vid) vid.pause(); });
+  if (!wasOpen) {
+    det.classList.add('open');
+    // Load video if available
+    const vidContainer = $('hv-' + id);
+    if (!vidContainer.dataset.loaded) {
+      vidContainer.dataset.loaded = '1';
+      (async () => {
+        try {
+          const db = await openDB(); const tx = db.transaction(STORE,'readonly'); const r = tx.objectStore(STORE).get(id);
+          r.onsuccess = () => {
+            const s = r.result;
+            if (s?.videoBlob) {
+              const u = URL.createObjectURL(s.videoBlob);
+              vidContainer.innerHTML = `<video class="history-video" src="${u}" controls playsinline></video>`;
+            }
+          };
+        } catch(e) { console.error(e); }
+      })();
+    }
+  }
 };
+
+window._deleteServe = id => showConfirm('Eintrag l\u00f6schen?', 'Unwiderruflich.', async () => { await deleteServe(id); renderHistory(); });
+
 window._shareServe = async id => {
   const db = await openDB(); const tx = db.transaction(STORE,'readonly'); const r = tx.objectStore(STORE).get(id);
-  r.onsuccess = async () => { const h = r.result; if(!h) return; let text = `\ud83c\udfd3 TT Aufschlag-Check\nScore: ${h.score}/10`; if(h.summary) text += `\n${h.summary}`;
-    if(navigator.share && h.videoBlob) { try { await navigator.share({text, files:[new File([h.videoBlob],'aufschlag.webm',{type:'video/webm'})]}); return; } catch {} }
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,'_blank');
+  r.onsuccess = async () => {
+    const h = r.result; if(!h) return;
+    const ok = h.ok || 0; const ev = h.evaluated || h.total || 8; const hna = h.na || 0;
+    const emoji = ok === ev ? '\u2705' : ok >= ev - 1 ? '\ud83d\udc4d' : ok >= ev - 3 ? '\u26a0\ufe0f' : '\u274c';
+    let text = `\ud83c\udfd3 *TT Aufschlag-Check*\n\nErgebnis: *${ok}/${ev} Regeln* ${emoji}${hna ? ` (${hna} nicht prüfbar)` : ''}\n`;
+    if (h.rules) {
+      const failed = RULES.filter(rule => h.rules[rule.id]?.ok === false);
+      const passed = RULES.filter(rule => h.rules[rule.id]?.ok === true);
+      if (failed.length > 0) text += `\nFehler:\n${failed.map(r2 => `\u274c ${r2.name}`).join('\n')}\n`;
+      if (passed.length > 0) text += `\nKorrekt:\n${passed.map(r2 => `\u2705 ${r2.name}`).join('\n')}\n`;
+    }
+    if (h.summary) text += `\n${h.summary}`;
+    text += `\n\n\ud83d\udc49 Teste deinen Aufschlag: https://phoeser.github.io/aufschlag-check/`;
+    if (navigator.share) {
+      try {
+        const shareData = { text };
+        if (h.videoBlob) {
+          const ext = h.videoBlob.type?.includes('mp4') ? 'mp4' : 'webm';
+          shareData.files = [new File([h.videoBlob], `aufschlag.${ext}`, {type: h.videoBlob.type || 'video/webm'})];
+        }
+        await navigator.share(shareData); return;
+      } catch(e) { if (e.name === 'AbortError') return; }
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 };
 
