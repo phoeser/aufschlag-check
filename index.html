@@ -327,14 +327,14 @@ const $ = id => document.getElementById(id);
 
 // ===== RULES =====
 const RULES = [
-  { id:'open_hand', name:'Offene, flache Hand', ref:'ITTF 2.06.01', detail:'Ball liegt frei auf der offenen, flachen Handfläche der freien Hand.' },
-  { id:'above_table', name:'Über Tischniveau & hinter Grundlinie', ref:'ITTF 2.06.04', detail:'Ball über Tischniveau und hinter der Grundlinie des Aufschlägers.' },
-  { id:'toss_vertical', name:'Nahezu senkrecht hochgeworfen', ref:'ITTF 2.06.02', detail:'Ball nahezu senkrecht (max ~30°) nach oben, ohne Drall.' },
-  { id:'toss_height', name:'Mind. 16 cm Wurfhöhe', ref:'ITTF 2.06.02', detail:'Ball steigt nach Verlassen der Hand mindestens 16 cm.' },
-  { id:'hit_on_fall', name:'Schlag beim Fallen', ref:'ITTF 2.06.03', detail:'Ball erst geschlagen nachdem er den höchsten Punkt erreicht hat.' },
-  { id:'visible_opponent', name:'Sichtbar für den Gegner', ref:'ITTF 2.06.05', detail:'Ball vom Hochwerfen bis Schlag immer sichtbar.' },
-  { id:'not_hidden', name:'Nicht durch Körper verdeckt', ref:'ITTF 2.06.05', detail:'Kein Verdecken durch freien Arm oder Körper.' },
-  { id:'hand_removed', name:'Freie Hand entfernt', ref:'ITTF 2.06.02', detail:'Freie Hand nach dem Hochwerfen sofort aus dem Bereich entfernt.' }
+  { id:'open_hand', name:'Offene, flache Hand', ref:'ITTF 2.06.01', detail:'Ball muss frei und ruhig auf der geöffneten, flachen Handfläche liegen. Finger müssen gestreckt und zusammen sein. Der Ball darf NICHT in der Hand gehalten, geklemmt oder von Fingern umschlossen werden.' },
+  { id:'above_table', name:'Über Tischniveau & hinter Grundlinie', ref:'ITTF 2.06.04', detail:'Der Ball muss sich beim Hochwerfen oberhalb der Spielfläche befinden UND hinter der Grundlinie (Tischkante) des Aufschlägers. Der Ball darf sich NICHT über dem Tisch oder vor der Grundlinie befinden.' },
+  { id:'toss_vertical', name:'Nahezu senkrecht hochgeworfen', ref:'ITTF 2.06.02', detail:'Der Ball muss nahezu senkrecht nach oben geworfen werden (max. 30° Abweichung von der Vertikalen). Schräge Würfe nach vorne, hinten oder zur Seite sind VERBOTEN. Achte auf die Flugbahn des Balls.' },
+  { id:'toss_height', name:'Mind. 16 cm Wurfhöhe', ref:'ITTF 2.06.02', detail:'Der Ball muss nach Verlassen der Hand mindestens 16 cm (ca. 4 Ballbreiten) aufsteigen. STRENG PRÜFEN: Vergleiche die Wurfhöhe mit dem Balldurchmesser (4 cm). Der Ball muss deutlich sichtbar mindestens 4 Balldurchmesser hoch steigen. Ein nur wenige Zentimeter hoher Wurf ist NICHT regelkonform.' },
+  { id:'hit_on_fall', name:'Schlag beim Fallen', ref:'ITTF 2.06.03', detail:'Der Ball darf ERST geschlagen werden, nachdem er seinen höchsten Punkt erreicht hat und wieder fällt. Ein Schlag am oder vor dem höchsten Punkt ist VERBOTEN. Achte darauf, ob der Ball einen klaren Scheitelpunkt erreicht bevor der Schläger ihn trifft.' },
+  { id:'visible_opponent', name:'Sichtbar für den Gegner', ref:'ITTF 2.06.05', detail:'Der Ball muss vom Moment des Hochwerfens bis zum Schlag jederzeit für den Gegner (Rückschläger) sichtbar sein. Er darf zu KEINEM Zeitpunkt verdeckt werden.' },
+  { id:'not_hidden', name:'Nicht durch Körper verdeckt', ref:'ITTF 2.06.05', detail:'Der Aufschläger darf den Ball NICHT mit irgendeinem Körperteil oder Kleidung verdecken. Besonders der freie Arm, die Schulter oder der Oberkörper dürfen den Ball nicht zwischen Hochwerfen und Schlag verbergen. STRENG PRÜFEN: Auch teilweises Verdecken ist ein Verstoß.' },
+  { id:'hand_removed', name:'Freie Hand entfernt', ref:'ITTF 2.06.02', detail:'Die freie Hand (Wurfhand) und der freie Arm müssen sofort nach dem Hochwerfen aus dem Bereich zwischen Ball und Netz entfernt werden. Die Hand darf NICHT im Schlagbereich verbleiben.' }
 ];
 
 // ===== STATE =====
@@ -648,27 +648,37 @@ async function analyzeWithFrames(apiKey, frames) {
 async function callGeminiAPI(apiKey, mediaParts) {
   const ruleList = RULES.map((r, i) => `${i+1}. "${r.id}": ${r.name} – ${r.detail} (${r.ref})`).join('\n');
 
-  const prompt = `Du bist ein ITTF-Tischtennis-Schiedsrichter-Experte. Analysiere diesen Tischtennis-Aufschlag.
+  const prompt = `Du bist ein STRENGER ITTF-Tischtennis-Oberschiedsrichter bei einem internationalen Turnier. Du tolerierst KEINE Regelverstöße. Analysiere diesen Tischtennis-Aufschlag mit höchster Genauigkeit.
+
+DEINE GRUNDHALTUNG: Im Zweifel GEGEN den Aufschläger entscheiden. Lieber einmal zu streng als einen Regelverstoß durchlassen. Ein Aufschlag muss ALLE Regeln EINDEUTIG erfüllen, um als korrekt zu gelten.
 
 Prüfe diese 8 offiziellen ITTF-Aufschlagregeln (Regel 2.06):
 ${ruleList}
 
-WICHTIG: Analysiere genau. Achte auf die gesamte Aufschlagbewegung – vom Hochwerfen des Balls bis zum Schlag. Bewerte jede Regel einzeln als korrekt (true) oder fehlerhaft (false). Wenn eine Regel nicht eindeutig zu erkennen ist, gib deine beste Einschätzung.
+ANALYSE-ANWEISUNGEN:
+- Analysiere das Video Frame für Frame. Achte auf die GESAMTE Aufschlagbewegung vom Hochwerfen bis zum Schlag.
+- WURFHÖHE: Schätze die Wurfhöhe anhand des Balldurchmessers (4 cm). Der Ball muss MINDESTENS 4 Balldurchmesser (16 cm) über die Hand steigen. Wenn der Wurf knapp aussieht, ist er NICHT regelkonform.
+- SENKRECHTER WURF: Verfolge die Flugbahn. Jede sichtbare seitliche oder nach-vorne-Bewegung ist ein Verstoß.
+- VERDECKEN: Prüfe ob Schulter, Arm oder Oberkörper den Ball zu irgendeinem Zeitpunkt verdecken — auch teilweise.
+- SCHLAG BEIM FALLEN: Der Ball muss einen KLAREN Scheitelpunkt haben und sichtbar fallen, bevor der Schläger zuschlägt.
+- Bewerte jede Regel einzeln als korrekt (true) oder fehlerhaft (false).
+- Wenn eine Regel nicht eindeutig erkennbar ist, werte sie als FEHLERHAFT (false) — der Aufschläger muss die Regelkonformität beweisen, nicht der Schiedsrichter.
+- Gib in der Begründung KONKRET an, was du im Video beobachtest (z.B. "Ball steigt nur ca. 8 cm, das sind etwa 2 Balldurchmesser — unter den geforderten 16 cm").
 
 Antworte NUR mit validem JSON in exakt diesem Format (keine Markdown-Codeblöcke, kein anderer Text):
 {
   "rules": {
-    "open_hand": {"ok": true, "reason": "Kurze Begründung auf Deutsch"},
-    "above_table": {"ok": true, "reason": "Kurze Begründung auf Deutsch"},
-    "toss_vertical": {"ok": true, "reason": "Kurze Begründung auf Deutsch"},
-    "toss_height": {"ok": true, "reason": "Kurze Begründung auf Deutsch"},
-    "hit_on_fall": {"ok": true, "reason": "Kurze Begründung auf Deutsch"},
-    "visible_opponent": {"ok": true, "reason": "Kurze Begründung auf Deutsch"},
-    "not_hidden": {"ok": true, "reason": "Kurze Begründung auf Deutsch"},
-    "hand_removed": {"ok": true, "reason": "Kurze Begründung auf Deutsch"}
+    "open_hand": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
+    "above_table": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
+    "toss_vertical": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
+    "toss_height": {"ok": false, "reason": "Konkrete Beobachtung mit geschätzter Höhe auf Deutsch"},
+    "hit_on_fall": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
+    "visible_opponent": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
+    "not_hidden": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
+    "hand_removed": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"}
   },
-  "score": 8,
-  "summary": "Zusammenfassung auf Deutsch (2-3 Sätze)"
+  "score": 7,
+  "summary": "Strenge Zusammenfassung auf Deutsch (2-3 Sätze). Nenne konkret was gut war und was nicht."
 }`;
 
   const parts = [...mediaParts, { text: prompt }];
