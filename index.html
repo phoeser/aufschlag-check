@@ -106,6 +106,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .result-item .icon{font-size:16px;flex-shrink:0}
 .result-item-reason{font-size:12px;color:var(--text-muted);margin-top:4px;padding-left:24px;line-height:1.5}
 .ki-badge{font-size:10px;background:rgba(26,115,232,.2);color:var(--primary);padding:2px 6px;border-radius:4px;margin-left:auto;flex-shrink:0}
+.na-badge{font-size:10px;background:rgba(156,163,175,.2);color:#9ca3af;padding:2px 6px;border-radius:4px;margin-left:auto;flex-shrink:0}
+.result-item-na{opacity:.75}
+.result-item-tipp{font-size:12px;color:var(--primary);margin-top:4px;padding-left:24px;line-height:1.5;background:rgba(26,115,232,.06);border-radius:6px;padding:6px 10px 6px 24px;margin-top:6px}
 .result-comment{font-size:15px;margin-top:14px;padding:12px 16px;border-radius:10px;background:var(--surface2);text-align:center;line-height:1.5}
 .result-summary{background:var(--surface2);border-radius:10px;padding:14px;margin-top:16px;font-size:13px;line-height:1.6;color:var(--text-muted)}
 
@@ -662,7 +665,8 @@ ANALYSE-ANWEISUNGEN:
 - VERDECKEN: Prüfe ob Schulter, Arm oder Oberkörper den Ball zu irgendeinem Zeitpunkt verdecken — auch teilweise.
 - SCHLAG BEIM FALLEN: Der Ball muss einen KLAREN Scheitelpunkt haben und sichtbar fallen, bevor der Schläger zuschlägt.
 - Bewerte jede Regel einzeln als korrekt (true) oder fehlerhaft (false).
-- Wenn eine Regel nicht eindeutig erkennbar ist, werte sie als FEHLERHAFT (false) — der Aufschläger muss die Regelkonformität beweisen, nicht der Schiedsrichter.
+- Wenn eine Regel im Video NICHT BEWERTBAR ist (z.B. Hand nicht sichtbar, Kamerawinkel falsch, Ball verdeckt durch Bildausschnitt), setze "ok" auf "na" und erkläre warum es nicht bewertbar ist. Gib außerdem einen konkreten "tipp" wie das Video aufgenommen werden müsste, damit diese Regel besser prüfbar ist.
+- Regeln die bewertbar sind, werden STRENG bewertet — im Zweifel GEGEN den Aufschläger.
 - Gib in der Begründung KONKRET an, was du im Video beobachtest (z.B. "Ball steigt nur ca. 8 cm, das sind etwa 2 Balldurchmesser — unter den geforderten 16 cm").
 
 Antworte NUR mit validem JSON in exakt diesem Format (keine Markdown-Codeblöcke, kein anderer Text):
@@ -672,13 +676,13 @@ Antworte NUR mit validem JSON in exakt diesem Format (keine Markdown-Codeblöcke
     "above_table": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
     "toss_vertical": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
     "toss_height": {"ok": false, "reason": "Konkrete Beobachtung mit geschätzter Höhe auf Deutsch"},
-    "hit_on_fall": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
+    "hit_on_fall": {"ok": "na", "reason": "Nicht bewertbar: Grund", "tipp": "Konkreter Tipp zur Videoaufnahme"},
     "visible_opponent": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
-    "not_hidden": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
+    "not_hidden": {"ok": "na", "reason": "Nicht bewertbar: Grund", "tipp": "Konkreter Tipp zur Videoaufnahme"},
     "hand_removed": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"}
   },
-  "score": 7,
-  "summary": "Strenge Zusammenfassung auf Deutsch (2-3 Sätze). Nenne konkret was gut war und was nicht."
+  "score": 5,
+  "summary": "Strenge Zusammenfassung auf Deutsch (2-3 Sätze). Nenne konkret was gut war und was nicht. Erwähne welche Regeln nicht prüfbar waren."
 }`;
 
   const parts = [...mediaParts, { text: prompt }];
@@ -717,25 +721,31 @@ function parseGeminiResult(text) {
   const json = JSON.parse(jsonMatch[0]);
 
   const rules = {};
-  const total = RULES.length;
-  let ok = 0;
+  let ok = 0, fail = 0, na = 0;
 
   RULES.forEach(rule => {
     const r = json.rules?.[rule.id];
     if (r) {
-      rules[rule.id] = { ok: !!r.ok, reason: r.reason || '', source: 'ki' };
-      if (r.ok) ok++;
+      if (r.ok === 'na' || r.ok === 'NA') {
+        rules[rule.id] = { ok: 'na', reason: r.reason || 'Nicht bewertbar', tipp: r.tipp || '', source: 'ki' };
+        na++;
+      } else {
+        rules[rule.id] = { ok: !!r.ok, reason: r.reason || '', tipp: '', source: 'ki' };
+        if (r.ok) ok++; else fail++;
+      }
     } else {
-      rules[rule.id] = { ok: false, reason: 'Konnte nicht bewertet werden', source: 'ki' };
+      rules[rule.id] = { ok: 'na', reason: 'Konnte nicht bewertet werden', tipp: '', source: 'ki' };
+      na++;
     }
   });
 
-  const score = Math.max(1, Math.min(10, json.score || Math.round(ok / total * 9 + 1)));
+  const evaluated = ok + fail;
+  const total = RULES.length;
 
   return {
     date: new Date().toLocaleString('de-DE'),
     timestamp: Date.now(),
-    score, ok, fail: total - ok, total,
+    ok, fail, na, evaluated, total,
     rules,
     summary: json.summary || '',
     videoBlob: currentVideoBlob
@@ -791,7 +801,9 @@ function getResultInfo(ok, total) {
 
   function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-  if (ok === total) {
+  if (total === 0) {
+    return { cls:'partial', colorCls:'score-yellow', stroke:'#dd6b20', title:'Nicht bewertbar', comment: '📹 Das Video lässt leider keine Bewertung zu. Versuche es mit besserem Kamerawinkel!' };
+  } else if (ok === total) {
     return { cls:'pass', colorCls:'score-green', stroke:'#0d9f6e', title:'Aufschlag regelkonform! ✅', comment: pickRandom(funnyComments.perfect) };
   } else if (ok >= total - 1) {
     return { cls:'good', colorCls:'score-lime', stroke:'#84cc16', title:'Fast perfekt!', comment: pickRandom(funnyComments.good) };
@@ -807,31 +819,37 @@ function getResultInfo(ok, total) {
 function showResultScreen() {
   const r = currentResult;
   const ok = r.ok;
-  const total = r.total;
-  const score = ok === total ? 10 : Math.max(1, Math.round(ok / total * 9));
-  const info = getResultInfo(ok, total);
+  const evaluated = r.evaluated;
+  const na = r.na;
+  const info = getResultInfo(ok, evaluated);
 
   // Gauge
   const circumference = 314;
-  const offset = circumference - (ok / total) * circumference;
+  const gaugeRatio = evaluated > 0 ? ok / evaluated : 0;
+  const offset = circumference - gaugeRatio * circumference;
   const gf = $('score-gauge-fill');
   gf.style.strokeDashoffset = circumference;
   gf.style.stroke = info.stroke;
-  $('score-number').textContent = `${ok}/${total}`;
+  $('score-number').textContent = `${ok}/${evaluated}`;
   $('score-number').className = `score-number ${info.colorCls}`;
   $('score-number').style.fontSize = '36px';
   $('result-title').textContent = info.title;
-  $('result-subtitle').textContent = ok === total ? 'Alle Regeln erfüllt — perfekter Aufschlag!' : `${ok} von ${total} Regeln erfüllt`;
+  let subtitle = ok === evaluated && evaluated > 0 ? 'Alle bewertbaren Regeln erfüllt!' : `${ok} von ${evaluated} bewertbaren Regeln erfüllt`;
+  if (na > 0) subtitle += ` (${na} nicht prüfbar)`;
+  $('result-subtitle').textContent = subtitle;
   $('result-card').className = `result-card ${info.cls}`;
 
   // Details
   let details = '';
   RULES.forEach(rule => {
     const res = r.rules[rule.id];
-    const ico = res?.ok ? '&#9989;' : '&#10060;';
-    details += `<div class="result-item">
-      <div class="result-item-header"><span class="icon">${ico}</span> ${rule.name} <span class="ki-badge">KI</span></div>
+    const isNa = res?.ok === 'na';
+    const ico = isNa ? '&#10067;' : res?.ok ? '&#9989;' : '&#10060;';
+    const badge = isNa ? '<span class="na-badge">Nicht prüfbar</span>' : '<span class="ki-badge">KI</span>';
+    details += `<div class="result-item${isNa ? ' result-item-na' : ''}">
+      <div class="result-item-header"><span class="icon">${ico}</span> ${rule.name} ${badge}</div>
       ${res?.reason ? `<div class="result-item-reason">${res.reason}</div>` : ''}
+      ${isNa && res?.tipp ? `<div class="result-item-tipp">&#128249; Tipp: ${res.tipp}</div>` : ''}
     </div>`;
   });
   $('result-details').innerHTML = details;
@@ -874,8 +892,9 @@ $('btn-whatsapp').addEventListener('click', async () => {
   const r = currentResult;
   const failedRules = RULES.filter(rule => r.rules[rule.id] && !r.rules[rule.id].ok);
   const passedRules = RULES.filter(rule => r.rules[rule.id] && r.rules[rule.id].ok);
-  const emoji = r.ok === r.total ? '\u2705' : r.ok >= r.total - 1 ? '\ud83d\udc4d' : r.ok >= r.total - 3 ? '\u26a0\ufe0f' : '\u274c';
-  let text = `\ud83c\udfd3 *TT Aufschlag-Check*\n\nErgebnis: *${r.ok}/${r.total} Regeln* ${emoji}\n`;
+  const ev = r.evaluated || r.total;
+  const emoji = r.ok === ev ? '\u2705' : r.ok >= ev - 1 ? '\ud83d\udc4d' : r.ok >= ev - 3 ? '\u26a0\ufe0f' : '\u274c';
+  let text = `\ud83c\udfd3 *TT Aufschlag-Check*\n\nErgebnis: *${r.ok}/${ev} Regeln* ${emoji}${r.na ? ` (${r.na} nicht prüfbar)` : ''}\n`;
   if (failedRules.length > 0) text += `\nFehler:\n${failedRules.map(r2 => `\u274c ${r2.name}`).join('\n')}\n`;
   if (passedRules.length > 0) text += `\nKorrekt:\n${passedRules.map(r2 => `\u2705 ${r2.name}`).join('\n')}\n`;
   if (r.summary) text += `\n${r.summary}`;
@@ -915,18 +934,18 @@ async function renderHistory() {
     if (serves.length === 0) { list.innerHTML = '<div class="empty-state"><div class="icon">&#127955;</div><p>Noch keine Aufschl\u00e4ge gespeichert.</p></div>'; return; }
     list.innerHTML = serves.map(h => {
       const s = h.score || 1;
-      const ok = h.ok; const total = h.total;
-      const cls = ok === total ? 'pass' : ok >= total - 1 ? 'good' : ok >= total - 3 ? 'partial' : ok >= total - 5 ? 'poor' : 'fail';
-      const ico = ok === total ? '&#9989;' : ok >= total - 1 ? '&#128077;' : ok >= total - 3 ? '&#9888;&#65039;' : '&#10060;';
+      const ok = h.ok; const ev = h.evaluated || h.total; const hna = h.na || 0;
+      const cls = ok === ev ? 'pass' : ok >= ev - 1 ? 'good' : ok >= ev - 3 ? 'partial' : ok >= ev - 5 ? 'poor' : 'fail';
+      const ico = ok === ev ? '&#9989;' : ok >= ev - 1 ? '&#128077;' : ok >= ev - 3 ? '&#9888;&#65039;' : '&#10060;';
       return `<div class="history-item">
         <div class="history-icon">${ico}</div>
-        <div class="history-info"><strong>${ok}/${total} Regeln</strong><span>${h.date}</span></div>
+        <div class="history-info"><strong>${ok}/${ev} Regeln</strong><span>${h.date}${hna ? ` \u2022 ${hna} nicht pr\u00fcfbar` : ''}</span></div>
         <div class="history-actions">
           ${h.videoBlob ? `<button class="history-btn" onclick="_replayServe(${h.id})">&#9654;</button>` : ''}
           <button class="history-btn" onclick="_shareServe(${h.id})">&#128172;</button>
           <button class="history-btn delete" onclick="_deleteServe(${h.id})">&#128465;</button>
         </div>
-        <div class="history-score ${cls}">${ok}/${total}</div>
+        <div class="history-score ${cls}">${ok}/${ev}</div>
       </div>`;
     }).join('');
   } catch { list.innerHTML = '<div class="empty-state"><p>Fehler beim Laden.</p></div>'; }
