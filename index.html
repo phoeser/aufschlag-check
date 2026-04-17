@@ -24,8 +24,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .header{background:linear-gradient(135deg,var(--primary),#4285f4);padding:16px 20px 20px;position:relative}
 .header h1{font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px}
 .header p{font-size:12px;opacity:.85;margin-top:2px;text-align:center}
-.btn-refresh{position:absolute;top:16px;right:14px;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,.18);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:background .2s}
-.btn-refresh:active{background:rgba(255,255,255,.35)}
+.header-btns{position:absolute;top:16px;right:14px;display:flex;gap:8px}
+.btn-header{width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,.18);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:background .2s}
+.btn-header:active{background:rgba(255,255,255,.35)}
 
 .screen{display:none}.screen.active{display:block}
 .main-content{padding-bottom:80px}
@@ -84,8 +85,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .result-section{padding:20px 16px}
 .result-card{background:var(--surface);border-radius:var(--radius);padding:24px;text-align:center;border:2px solid var(--border)}
 .result-card.pass{border-color:var(--success);background:rgba(13,159,110,.08)}
-.result-card.fail{border-color:var(--danger);background:rgba(229,62,62,.08)}
+.result-card.good{border-color:#84cc16;background:rgba(132,204,22,.08)}
 .result-card.partial{border-color:var(--warning);background:rgba(221,107,32,.08)}
+.result-card.poor{border-color:#ea580c;background:rgba(234,88,12,.08)}
+.result-card.fail{border-color:var(--danger);background:rgba(229,62,62,.08)}
 .score-gauge{position:relative;width:150px;height:150px;margin:0 auto 16px}
 .score-gauge svg{width:100%;height:100%;transform:rotate(-90deg)}
 .score-gauge-bg{fill:none;stroke:var(--surface2);stroke-width:10}
@@ -93,7 +96,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .score-gauge-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .score-number{font-size:48px;font-weight:800;line-height:1}
 .score-label{font-size:12px;color:var(--text-muted);margin-top:4px}
-.score-green{color:var(--success)}.score-yellow{color:var(--warning)}.score-red{color:var(--danger)}
+.score-green{color:var(--success)}.score-lime{color:#84cc16}.score-yellow{color:var(--warning)}.score-orange{color:#ea580c}.score-red{color:var(--danger)}
 .result-title{font-size:20px;font-weight:700;margin-bottom:4px}
 .result-subtitle{font-size:14px;color:var(--text-muted);margin-bottom:16px}
 .result-details{text-align:left}
@@ -103,6 +106,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .result-item .icon{font-size:16px;flex-shrink:0}
 .result-item-reason{font-size:12px;color:var(--text-muted);margin-top:4px;padding-left:24px;line-height:1.5}
 .ki-badge{font-size:10px;background:rgba(26,115,232,.2);color:var(--primary);padding:2px 6px;border-radius:4px;margin-left:auto;flex-shrink:0}
+.result-comment{font-size:15px;margin-top:14px;padding:12px 16px;border-radius:10px;background:var(--surface2);text-align:center;line-height:1.5}
 .result-summary{background:var(--surface2);border-radius:10px;padding:14px;margin-top:16px;font-size:13px;line-height:1.6;color:var(--text-muted)}
 
 /* Actions */
@@ -124,7 +128,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .history-info span{font-size:12px;color:var(--text-muted)}
 .history-score{font-size:14px;font-weight:700;padding:4px 10px;border-radius:8px}
 .history-score.pass{background:rgba(13,159,110,.15);color:var(--success)}
+.history-score.good{background:rgba(132,204,22,.15);color:#84cc16}
 .history-score.partial{background:rgba(221,107,32,.15);color:var(--warning)}
+.history-score.poor{background:rgba(234,88,12,.15);color:#ea580c}
 .history-score.fail{background:rgba(229,62,62,.15);color:var(--danger)}
 .history-actions{display:flex;gap:6px}
 .history-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
@@ -176,7 +182,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="header">
   <h1>&#127955; TT Aufschlag-Check</h1>
   <p>Vollautomatische KI-Aufschlaganalyse nach ITTF-Regeln</p>
-  <button class="btn-refresh" onclick="hardRefresh()" title="App neu laden (Cache leeren)">&#8635;</button>
+  <div class="header-btns">
+    <button class="btn-header" onclick="shareApp()" title="App teilen">&#128279;</button>
+    <button class="btn-header" onclick="hardRefresh()" title="App neu laden (Cache leeren)">&#8635;</button>
+  </div>
 </div>
 
 <div class="main-content">
@@ -340,6 +349,25 @@ const _k = [81,85,108,54,89,86,78,53,81,50,90,50,100,108,100,71,99,85,52,121,86,
 function _dk(){return atob(_k.map(c=>String.fromCharCode(c)).join(''));}
 
 // ===== HARD REFRESH =====
+async function shareApp() {
+  const shareData = {
+    title: 'TT Aufschlag-Check',
+    text: '🏓 Prüfe deinen Tischtennis-Aufschlag mit KI! Vollautomatische Analyse nach ITTF-Regeln:',
+    url: 'https://phoeser.github.io/aufschlag-check/'
+  };
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+    } else {
+      // Fallback: WhatsApp direkt öffnen
+      const waText = encodeURIComponent(`${shareData.text}\n${shareData.url}`);
+      window.open(`https://wa.me/?text=${waText}`, '_blank');
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') console.log('Share error:', e);
+  }
+}
+
 async function hardRefresh() {
   // Clear all caches for this app
   if ('caches' in window) {
@@ -712,25 +740,78 @@ function showError(title, text) {
 }
 
 // ===== RESULT SCREEN =====
+function getResultInfo(ok, total) {
+  const funnyComments = {
+    perfect: [
+      "🏆 Timo Boll wäre stolz auf dich!",
+      "🎯 Schiedsrichter nickt anerkennend — Perfektion!",
+      "🥇 Besser geht's nicht! Dein Aufschlag ist ein Kunstwerk.",
+      "💯 Ma Long ruft an — er will Tipps von dir!",
+      "🌟 Regelwerk? Beherrschst du im Schlaf!"
+    ],
+    good: [
+      "👍 Fast perfekt! Noch eine Kleinigkeit und du bist Profi.",
+      "😎 Dein Schiedsrichter zögert kurz… lässt es aber durchgehen.",
+      "🔧 Nur ein kleiner Feinschliff trennt dich von der Perfektion!",
+      "📐 Knapp daneben ist auch vorbei — aber nur knapp!",
+      "🤏 Sooo nah dran! Ein winziges Detail noch."
+    ],
+    partial: [
+      "😬 Naja... der Schiedsrichter hebt schon die Kelle.",
+      "🎲 50:50 — ob der durchgeht, hängt vom Schiri ab!",
+      "⚖️ Halb korrekt ist halb falsch — Übung macht den Meister!",
+      "🤷 Dein Gegner würde sich beschweren. Zurecht.",
+      "📚 Zeit, mal wieder ins Regelwerk zu schauen!"
+    ],
+    poor: [
+      "😅 Das war... kreativ. Aber leider nicht regelkonform.",
+      "🙈 Der Schiedsrichter holt schon die gelbe Karte raus.",
+      "🎪 Zirkustrick oder Aufschlag? Schwer zu sagen!",
+      "🚨 Alarm! Hier stimmt einiges nicht.",
+      "😵 Dein Aufschlag-Coach bekommt gerade Schweißausbrüche."
+    ],
+    fail: [
+      "💀 Houston, wir haben ein Problem!",
+      "🫣 War das… war das ein Aufschlag?!",
+      "🏳️ Dein Gegner legt direkt Protest ein — berechtigt!",
+      "🤯 Das ITTF-Regelwerk weint leise in der Ecke.",
+      "🎭 Plot-Twist: Das war eigentlich gar kein Aufschlag, oder?"
+    ]
+  };
+
+  function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  if (ok === total) {
+    return { cls:'pass', colorCls:'score-green', stroke:'#0d9f6e', title:'Aufschlag regelkonform! ✅', comment: pickRandom(funnyComments.perfect) };
+  } else if (ok >= total - 1) {
+    return { cls:'good', colorCls:'score-lime', stroke:'#84cc16', title:'Fast perfekt!', comment: pickRandom(funnyComments.good) };
+  } else if (ok >= total - 3) {
+    return { cls:'partial', colorCls:'score-yellow', stroke:'#dd6b20', title:'Teilweise korrekt', comment: pickRandom(funnyComments.partial) };
+  } else if (ok >= total - 5) {
+    return { cls:'poor', colorCls:'score-orange', stroke:'#ea580c', title:'Überwiegend fehlerhaft', comment: pickRandom(funnyComments.poor) };
+  } else {
+    return { cls:'fail', colorCls:'score-red', stroke:'#e53e3e', title:'Nicht regelkonform ❌', comment: pickRandom(funnyComments.fail) };
+  }
+}
+
 function showResultScreen() {
   const r = currentResult;
-  const score = r.score;
-  const info = score >= 7
-    ? { cls:'pass', colorCls:'score-green', stroke:'#0d9f6e', title:'Aufschlag regelkonform!' }
-    : score >= 4
-    ? { cls:'partial', colorCls:'score-yellow', stroke:'#dd6b20', title:'Aufschlag teilweise korrekt' }
-    : { cls:'fail', colorCls:'score-red', stroke:'#e53e3e', title:'Aufschlag nicht regelkonform' };
+  const ok = r.ok;
+  const total = r.total;
+  const score = ok === total ? 10 : Math.max(1, Math.round(ok / total * 9));
+  const info = getResultInfo(ok, total);
 
   // Gauge
   const circumference = 314;
-  const offset = circumference - (score / 10) * circumference;
+  const offset = circumference - (ok / total) * circumference;
   const gf = $('score-gauge-fill');
   gf.style.strokeDashoffset = circumference;
   gf.style.stroke = info.stroke;
-  $('score-number').textContent = score;
+  $('score-number').textContent = `${ok}/${total}`;
   $('score-number').className = `score-number ${info.colorCls}`;
+  $('score-number').style.fontSize = '36px';
   $('result-title').textContent = info.title;
-  $('result-subtitle').textContent = `${r.ok} von ${r.total} Regeln erf\u00fcllt`;
+  $('result-subtitle').textContent = ok === total ? 'Alle Regeln erfüllt — perfekter Aufschlag!' : `${ok} von ${total} Regeln erfüllt`;
   $('result-card').className = `result-card ${info.cls}`;
 
   // Details
@@ -744,6 +825,16 @@ function showResultScreen() {
     </div>`;
   });
   $('result-details').innerHTML = details;
+
+  // Funny comment
+  let commentEl = $('result-comment');
+  if (!commentEl) {
+    commentEl = document.createElement('div');
+    commentEl.id = 'result-comment';
+    commentEl.className = 'result-comment';
+    $('result-details').after(commentEl);
+  }
+  commentEl.textContent = info.comment;
 
   // Summary
   if (r.summary) {
@@ -773,7 +864,8 @@ $('btn-whatsapp').addEventListener('click', async () => {
   const r = currentResult;
   const failedRules = RULES.filter(rule => r.rules[rule.id] && !r.rules[rule.id].ok);
   const passedRules = RULES.filter(rule => r.rules[rule.id] && r.rules[rule.id].ok);
-  let text = `\ud83c\udfd3 *TT Aufschlag-Check*\n\nScore: *${r.score}/10* ${r.score >= 7 ? '\u2705' : r.score >= 4 ? '\u26a0\ufe0f' : '\u274c'}\n`;
+  const emoji = r.ok === r.total ? '\u2705' : r.ok >= r.total - 1 ? '\ud83d\udc4d' : r.ok >= r.total - 3 ? '\u26a0\ufe0f' : '\u274c';
+  let text = `\ud83c\udfd3 *TT Aufschlag-Check*\n\nErgebnis: *${r.ok}/${r.total} Regeln* ${emoji}\n`;
   if (failedRules.length > 0) text += `\nFehler:\n${failedRules.map(r2 => `\u274c ${r2.name}`).join('\n')}\n`;
   if (passedRules.length > 0) text += `\nKorrekt:\n${passedRules.map(r2 => `\u2705 ${r2.name}`).join('\n')}\n`;
   if (r.summary) text += `\n${r.summary}`;
@@ -813,17 +905,18 @@ async function renderHistory() {
     if (serves.length === 0) { list.innerHTML = '<div class="empty-state"><div class="icon">&#127955;</div><p>Noch keine Aufschl\u00e4ge gespeichert.</p></div>'; return; }
     list.innerHTML = serves.map(h => {
       const s = h.score || 1;
-      const cls = s >= 7 ? 'pass' : s >= 4 ? 'partial' : 'fail';
-      const ico = s >= 7 ? '&#9989;' : s >= 4 ? '&#9888;&#65039;' : '&#10060;';
+      const ok = h.ok; const total = h.total;
+      const cls = ok === total ? 'pass' : ok >= total - 1 ? 'good' : ok >= total - 3 ? 'partial' : ok >= total - 5 ? 'poor' : 'fail';
+      const ico = ok === total ? '&#9989;' : ok >= total - 1 ? '&#128077;' : ok >= total - 3 ? '&#9888;&#65039;' : '&#10060;';
       return `<div class="history-item">
         <div class="history-icon">${ico}</div>
-        <div class="history-info"><strong>Score: ${s}/10</strong><span>${h.date} &bull; ${h.ok}/${h.total} korrekt</span></div>
+        <div class="history-info"><strong>${ok}/${total} Regeln</strong><span>${h.date}</span></div>
         <div class="history-actions">
           ${h.videoBlob ? `<button class="history-btn" onclick="_replayServe(${h.id})">&#9654;</button>` : ''}
           <button class="history-btn" onclick="_shareServe(${h.id})">&#128172;</button>
           <button class="history-btn delete" onclick="_deleteServe(${h.id})">&#128465;</button>
         </div>
-        <div class="history-score ${cls}">${s}/10</div>
+        <div class="history-score ${cls}">${ok}/${total}</div>
       </div>`;
     }).join('');
   } catch { list.innerHTML = '<div class="empty-state"><p>Fehler beim Laden.</p></div>'; }
