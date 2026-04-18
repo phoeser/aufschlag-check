@@ -149,6 +149,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .empty-state{text-align:center;padding:48px 20px;color:var(--text-muted)}
 .empty-state .icon{font-size:48px;margin-bottom:12px;opacity:.5}
 
+/* Feedback */
+.feedback-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:12px}
+.feedback-title{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.feedback-desc{font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.5}
+.feedback-slider-wrap{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.feedback-slider{flex:1;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:var(--surface2);outline:none}
+.feedback-slider::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--primary);cursor:pointer;border:2px solid var(--bg)}
+.feedback-value{font-size:24px;font-weight:700;width:36px;text-align:center;color:var(--primary)}
+.feedback-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:-6px;margin-bottom:12px;padding:0 2px}
+.btn-feedback{width:100%;padding:10px;border-radius:8px;border:none;background:var(--primary);color:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-feedback:disabled{opacity:0.5;cursor:not-allowed}
+.btn-feedback.sent{background:var(--success)}
+.feedback-status{font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px}
+
 /* Rules */
 .rule-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px}
 .rule-header{display:flex;align-items:flex-start;gap:12px}
@@ -268,6 +282,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         <div id="result-subtitle" class="result-subtitle"></div>
         <div id="result-details" class="result-details"></div>
         <div id="result-summary" class="result-summary" style="display:none"></div>
+        <div class="feedback-card" id="feedback-card">
+          <div class="feedback-title">&#128202; Deine Einschätzung</div>
+          <div class="feedback-desc">Wie korrekt war der Aufschlag deiner Meinung nach? Dein Feedback hilft, die KI zu verbessern!</div>
+          <div class="feedback-slider-wrap">
+            <span style="font-size:12px;color:var(--text-muted)">1</span>
+            <input type="range" min="1" max="10" value="5" class="feedback-slider" id="feedback-slider" oninput="$('feedback-value').textContent=this.value">
+            <span style="font-size:12px;color:var(--text-muted)">10</span>
+            <div class="feedback-value" id="feedback-value">5</div>
+          </div>
+          <div class="feedback-labels"><span>Völlig falsch</span><span>Perfekter Aufschlag</span></div>
+          <button class="btn-feedback" id="btn-feedback" onclick="sendFeedback()">&#128640; Feedback senden</button>
+          <div class="feedback-status" id="feedback-status"></div>
+        </div>
       </div>
     </div>
     <div class="action-grid">
@@ -893,8 +920,65 @@ function showResultScreen() {
   $('btn-save').innerHTML = '&#128190; Speichern';
   $('btn-save').className = 'btn-action btn-save';
 
+  // Reset feedback
+  $('feedback-slider').value = 5;
+  $('feedback-value').textContent = '5';
+  $('btn-feedback').disabled = false;
+  $('btn-feedback').className = 'btn-feedback';
+  $('btn-feedback').innerHTML = '&#128640; Feedback senden';
+  $('feedback-status').textContent = '';
+  $('feedback-card').style.display = 'block';
+
   showScreen('screen-result');
   requestAnimationFrame(() => requestAnimationFrame(() => { gf.style.strokeDashoffset = offset; }));
+}
+
+// ===== FEEDBACK =====
+// WICHTIG: Ersetze diese URL mit deiner Google Apps Script Web-App URL
+const FEEDBACK_URL = 'https://script.google.com/macros/s/AKfycbyk-ThhdlymSPkSMj7Z-6tpLHHBzvgNXt2Je_hgIglMAbnNfe2ro8vLrIz-ZP2yMqFv/exec';
+
+async function sendFeedback() {
+  if (FEEDBACK_URL.includes('PASTE_YOUR')) {
+    $('feedback-status').textContent = '⚠️ Feedback-URL noch nicht konfiguriert';
+    return;
+  }
+  const btn = $('btn-feedback');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin" style="width:14px;height:14px;border-width:2px"></span> Sende...';
+
+  try {
+    const r = currentResult;
+    const payload = {
+      ok: r.ok, fail: r.fail, na: r.na, evaluated: r.evaluated, total: r.total,
+      humanScore: parseInt($('feedback-slider').value),
+      rules: r.rules,
+      summary: r.summary || '',
+      userAgent: navigator.userAgent
+    };
+
+    const res = await fetch(FEEDBACK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      btn.className = 'btn-feedback sent';
+      btn.innerHTML = '&#9989; Danke für dein Feedback!';
+      $('feedback-status').textContent = data.remaining !== undefined ? `Noch ${data.remaining} Feedbacks möglich` : '';
+    } else if (data.reason === 'limit_reached') {
+      btn.innerHTML = '&#128203; Sammlung abgeschlossen';
+      $('feedback-status').textContent = 'Vielen Dank! Die Feedback-Sammlung ist beendet.';
+    } else {
+      throw new Error(data.message || 'Unbekannter Fehler');
+    }
+  } catch(e) {
+    console.error('Feedback error:', e);
+    btn.disabled = false;
+    btn.innerHTML = '&#128640; Nochmal versuchen';
+    $('feedback-status').textContent = '❌ Fehler beim Senden — bitte nochmal versuchen';
+  }
 }
 
 // ===== ACTIONS =====
