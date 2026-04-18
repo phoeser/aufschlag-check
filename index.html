@@ -372,7 +372,8 @@ const RULES = [
   { id:'hit_on_fall', name:'Schlag beim Fallen', ref:'ITTF 2.06.03', detail:'Der Ball darf ERST geschlagen werden, nachdem er seinen höchsten Punkt erreicht hat und wieder fällt. Ein Schlag am oder vor dem höchsten Punkt ist VERBOTEN. Achte darauf, ob der Ball einen klaren Scheitelpunkt erreicht bevor der Schläger ihn trifft.' },
   { id:'visible_opponent', name:'Sichtbar für den Gegner', ref:'ITTF 2.06.05', detail:'Der Ball muss vom Moment des Hochwerfens bis zum Schlag jederzeit für den Gegner (Rückschläger) sichtbar sein. Er darf zu KEINEM Zeitpunkt verdeckt werden.' },
   { id:'not_hidden', name:'Nicht durch Körper verdeckt', ref:'ITTF 2.06.05', detail:'Der Aufschläger darf den Ball NICHT mit irgendeinem Körperteil oder Kleidung verdecken. Besonders der freie Arm, die Schulter oder der Oberkörper dürfen den Ball nicht zwischen Hochwerfen und Schlag verbergen. STRENG PRÜFEN: Auch teilweises Verdecken ist ein Verstoß.' },
-  { id:'hand_removed', name:'Freie Hand entfernt', ref:'ITTF 2.06.02', detail:'Die freie Hand (Wurfhand) und der freie Arm müssen sofort nach dem Hochwerfen aus dem Bereich zwischen Ball und Netz entfernt werden. Die Hand darf NICHT im Schlagbereich verbleiben.' }
+  { id:'hand_removed', name:'Freie Hand entfernt', ref:'ITTF 2.06.02', detail:'Die freie Hand (Wurfhand) und der freie Arm müssen sofort nach dem Hochwerfen aus dem Bereich zwischen Ball und Netz entfernt werden. Die Hand darf NICHT im Schlagbereich verbleiben.' },
+  { id:'own_side_first', name:'Ball berührt zuerst eigene Seite', ref:'ITTF 2.06.06', detail:'Der Ball muss nach dem Schlag ZUERST auf der eigenen Tischseite des Aufschlägers aufspringen, BEVOR er über das Netz auf die gegnerische Seite fliegt. Ein Aufschlag, bei dem der Ball direkt auf die gegnerische Seite oder ins Netz gespielt wird, ohne die eigene Seite zu berühren, ist UNGÜLTIG. STRENG PRÜFEN.', hidden: true }
 ];
 
 // ===== STATE =====
@@ -690,6 +691,13 @@ async function callGeminiAPI(apiKey, mediaParts) {
 
 DEINE GRUNDHALTUNG: Im Zweifel GEGEN den Aufschläger entscheiden. Lieber einmal zu streng als einen Regelverstoß durchlassen. Ein Aufschlag muss ALLE Regeln EINDEUTIG erfüllen, um als korrekt zu gelten.
 
+WICHTIG — GRUNDLEGENDE PRÜFUNG ZUERST:
+Bevor du Einzelregeln prüfst, stelle fest: Findet überhaupt ein REGELKONFORMER AUFSCHLAG statt?
+- Wird der Ball WIRKLICH hochgeworfen, oder wird er nur angetippt/direkt geschlagen/fallen gelassen?
+- Berührt der Ball nach dem Schlag die EIGENE Tischseite zuerst?
+- Ist eine erkennbare Aufschlagbewegung vorhanden (Hochwerfen → Fallen lassen → Schlagen)?
+Wenn GRUNDLEGENDE Elemente fehlen (kein Hochwerfen, Ball berührt nicht die eigene Seite), dann müssen MEHRERE Regeln als fail bewertet werden — nicht nur eine! Ein Aufschlag ohne echten Hochwurf verstößt gegen toss_height, toss_vertical UND hit_on_fall gleichzeitig.
+
 Prüfe diese 8 offiziellen ITTF-Aufschlagregeln (Regel 2.06):
 ${ruleList}
 
@@ -722,10 +730,11 @@ Antworte NUR mit validem JSON in exakt diesem Format (keine Markdown-Codeblöcke
     "hit_on_fall": {"ok": "na", "reason": "Nicht bewertbar: Grund", "tipp": "Konkreter Tipp zur Videoaufnahme"},
     "visible_opponent": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
     "not_hidden": {"ok": "na", "reason": "Nicht bewertbar: Grund", "tipp": "Konkreter Tipp zur Videoaufnahme"},
-    "hand_removed": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"}
+    "hand_removed": {"ok": true, "reason": "Konkrete Beobachtung auf Deutsch"},
+    "own_side_first": {"ok": false, "reason": "Konkrete Beobachtung auf Deutsch"}
   },
   "score": 5,
-  "summary": "Strenge Zusammenfassung auf Deutsch (2-3 Sätze). Nenne konkret was gut war und was nicht. Erwähne welche Regeln nicht prüfbar waren."
+  "summary": "STRENGE, EHRLICHE Zusammenfassung auf Deutsch (2-3 Sätze). Sei KRITISCH und DIREKT. Wenn grundlegende Dinge fehlen (kein Hochwerfen, Ball berührt nicht eigene Seite), sage klar: 'Dieser Aufschlag ist regelwidrig.' Beschönige NICHTS. Nenne konkret die größten Verstöße zuerst, dann was gut war. Bei mehr als 2 Fehlern: klare Aussage dass der Aufschlag SO im Wettkampf nicht zulässig wäre."
 }`;
 
   const parts = [...mediaParts, { text: prompt }];
@@ -884,7 +893,7 @@ function showResultScreen() {
 
   // Details
   let details = '';
-  RULES.forEach(rule => {
+  RULES.filter(rule => !rule.hidden).forEach(rule => {
     const res = r.rules[rule.id];
     const isNa = res?.ok === 'na';
     const ico = isNa ? '&#10067;' : res?.ok ? '&#9989;' : '&#10060;';
@@ -997,9 +1006,10 @@ $('btn-save').addEventListener('click', async () => {
 
 $('btn-whatsapp').addEventListener('click', async () => {
   const r = currentResult;
-  const failedRules = RULES.filter(rule => r.rules[rule.id] && r.rules[rule.id].ok === false);
-  const passedRules = RULES.filter(rule => r.rules[rule.id] && r.rules[rule.id].ok === true);
-  const naRules = RULES.filter(rule => r.rules[rule.id] && r.rules[rule.id].ok === 'na');
+  const visibleRules = RULES.filter(rule => !rule.hidden);
+  const failedRules = visibleRules.filter(rule => r.rules[rule.id] && r.rules[rule.id].ok === false);
+  const passedRules = visibleRules.filter(rule => r.rules[rule.id] && r.rules[rule.id].ok === true);
+  const naRules = visibleRules.filter(rule => r.rules[rule.id] && r.rules[rule.id].ok === 'na');
   const ev = r.evaluated || r.total;
   const emoji = r.ok === ev ? '\u2705' : r.ok >= ev - 1 ? '\ud83d\udc4d' : r.ok >= ev - 3 ? '\u26a0\ufe0f' : '\u274c';
   let text = `\ud83c\udfd3 *TT Aufschlag-Check*\n\nErgebnis: *${r.ok}/${ev} Regeln* ${emoji}${r.na ? ` (${r.na} nicht prüfbar)` : ''}\n`;
@@ -1053,7 +1063,7 @@ async function renderHistory() {
       const ico = ok === ev ? '&#9989;' : ok >= ev - 1 ? '&#128077;' : ok >= ev - 3 ? '&#9888;&#65039;' : '&#10060;';
       let detailHtml = '';
       if (h.rules) {
-        const ruleEntries = RULES.map(rule => {
+        const ruleEntries = RULES.filter(rule => !rule.hidden).map(rule => {
           const rd = h.rules[rule.id];
           if (!rd) return '';
           const rIco = rd.ok === 'na' ? '&#10067;' : rd.ok ? '&#9989;' : '&#10060;';
@@ -1118,8 +1128,8 @@ window._shareServe = async id => {
     const emoji = ok === ev ? '\u2705' : ok >= ev - 1 ? '\ud83d\udc4d' : ok >= ev - 3 ? '\u26a0\ufe0f' : '\u274c';
     let text = `\ud83c\udfd3 *TT Aufschlag-Check*\n\nErgebnis: *${ok}/${ev} Regeln* ${emoji}${hna ? ` (${hna} nicht prüfbar)` : ''}\n`;
     if (h.rules) {
-      const failed = RULES.filter(rule => h.rules[rule.id]?.ok === false);
-      const passed = RULES.filter(rule => h.rules[rule.id]?.ok === true);
+      const failed = RULES.filter(rule => !rule.hidden && h.rules[rule.id]?.ok === false);
+      const passed = RULES.filter(rule => !rule.hidden && h.rules[rule.id]?.ok === true);
       if (failed.length > 0) text += `\nFehler:\n${failed.map(r2 => `\u274c ${r2.name}`).join('\n')}\n`;
       if (passed.length > 0) text += `\nKorrekt:\n${passed.map(r2 => `\u2705 ${r2.name}`).join('\n')}\n`;
     }
@@ -1141,7 +1151,7 @@ window._shareServe = async id => {
 
 // ===== RULES REFERENCE =====
 function renderRulesReference() {
-  $('rules-reference').innerHTML = RULES.map((r, i) => `
+  $('rules-reference').innerHTML = RULES.filter(r => !r.hidden).map((r, i) => `
     <div class="rule-card"><div class="rule-header">
       <div class="rule-number">${i+1}</div>
       <div class="rule-content"><div class="rule-name">${r.name}</div><div class="rule-desc">${r.detail}</div><div class="rule-ref">${r.ref}</div></div>
