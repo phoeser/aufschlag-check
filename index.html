@@ -948,42 +948,38 @@ async function sendFeedback() {
 
   try {
     const r = currentResult;
-    const payload = {
-      ok: r.ok, fail: r.fail, na: r.na, evaluated: r.evaluated, total: r.total,
-      humanScore: parseInt($('feedback-slider').value),
-      rules: r.rules,
-      summary: r.summary || '',
-      userAgent: navigator.userAgent
-    };
+    const ruleStr = RULES.map(rule => {
+      const rd = r.rules[rule.id];
+      if (!rd) return rule.id + ':?';
+      if (rd.ok === 'na') return rule.id + ':na';
+      return rule.id + ':' + (rd.ok ? 'ok' : 'fail');
+    }).join(',');
 
-    // Google Apps Script braucht no-cors wegen CORS-Redirect
-    // Wir senden per unsichtbarem Form als Fallback
-    try {
-      const res = await fetch(FEEDBACK_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
-      });
-      // no-cors gibt opaque response — wir nehmen an es hat geklappt
-      btn.className = 'btn-feedback sent';
-      btn.innerHTML = '&#9989; Danke für dein Feedback!';
-      $('feedback-status').textContent = 'Dein Feedback wurde gesendet';
-    } catch(fetchErr) {
-      // Fallback: per verstecktem iframe + form
-      const iframe = document.createElement('iframe');
-      iframe.name = 'fb-frame'; iframe.style.display = 'none';
-      document.body.appendChild(iframe);
-      const form = document.createElement('form');
-      form.method = 'POST'; form.action = FEEDBACK_URL; form.target = 'fb-frame';
-      const input = document.createElement('input');
-      input.type = 'hidden'; input.name = 'payload'; input.value = JSON.stringify(payload);
-      form.appendChild(input); document.body.appendChild(form); form.submit();
-      setTimeout(() => { iframe.remove(); form.remove(); }, 5000);
-      btn.className = 'btn-feedback sent';
-      btn.innerHTML = '&#9989; Danke für dein Feedback!';
-      $('feedback-status').textContent = 'Dein Feedback wurde gesendet';
-    }
+    // Sende per GET mit URL-Parametern (umgeht CORS-Problem bei Google Apps Script)
+    const params = new URLSearchParams({
+      ok: r.ok, fail: r.fail, na: r.na, evaluated: r.evaluated, total: r.total,
+      humanScore: $('feedback-slider').value,
+      rules: ruleStr,
+      summary: (r.summary || '').substring(0, 500),
+      ua: navigator.userAgent.substring(0, 200)
+    });
+
+    // Unsichtbares Bild-Tag als zuverlässigster Weg (kein CORS, kein Redirect-Problem)
+    const img = new Image();
+    const sendUrl = FEEDBACK_URL + '?' + params.toString();
+
+    await new Promise((resolve, reject) => {
+      // Google Apps Script antwortet mit JSON, nicht mit Bild — daher kommt onerror,
+      // aber der Request wurde trotzdem verarbeitet. Wir akzeptieren beides.
+      img.onload = resolve;
+      img.onerror = resolve; // GAS antwortet kein Bild, aber Daten kommen an
+      img.src = sendUrl;
+      setTimeout(resolve, 5000); // Timeout nach 5s
+    });
+
+    btn.className = 'btn-feedback sent';
+    btn.innerHTML = '&#9989; Danke für dein Feedback!';
+    $('feedback-status').textContent = 'Dein Feedback wurde gesendet';
   } catch(e) {
     console.error('Feedback error:', e);
     btn.disabled = false;
