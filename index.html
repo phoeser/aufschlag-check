@@ -956,22 +956,33 @@ async function sendFeedback() {
       userAgent: navigator.userAgent
     };
 
-    const res = await fetch(FEEDBACK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-    if (data.success) {
+    // Google Apps Script braucht no-cors wegen CORS-Redirect
+    // Wir senden per unsichtbarem Form als Fallback
+    try {
+      const res = await fetch(FEEDBACK_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      });
+      // no-cors gibt opaque response — wir nehmen an es hat geklappt
       btn.className = 'btn-feedback sent';
       btn.innerHTML = '&#9989; Danke für dein Feedback!';
-      $('feedback-status').textContent = data.remaining !== undefined ? `Noch ${data.remaining} Feedbacks möglich` : '';
-    } else if (data.reason === 'limit_reached') {
-      btn.innerHTML = '&#128203; Sammlung abgeschlossen';
-      $('feedback-status').textContent = 'Vielen Dank! Die Feedback-Sammlung ist beendet.';
-    } else {
-      throw new Error(data.message || 'Unbekannter Fehler');
+      $('feedback-status').textContent = 'Dein Feedback wurde gesendet';
+    } catch(fetchErr) {
+      // Fallback: per verstecktem iframe + form
+      const iframe = document.createElement('iframe');
+      iframe.name = 'fb-frame'; iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      const form = document.createElement('form');
+      form.method = 'POST'; form.action = FEEDBACK_URL; form.target = 'fb-frame';
+      const input = document.createElement('input');
+      input.type = 'hidden'; input.name = 'payload'; input.value = JSON.stringify(payload);
+      form.appendChild(input); document.body.appendChild(form); form.submit();
+      setTimeout(() => { iframe.remove(); form.remove(); }, 5000);
+      btn.className = 'btn-feedback sent';
+      btn.innerHTML = '&#9989; Danke für dein Feedback!';
+      $('feedback-status').textContent = 'Dein Feedback wurde gesendet';
     }
   } catch(e) {
     console.error('Feedback error:', e);
