@@ -691,20 +691,49 @@ async function callGeminiAPI(apiKey, mediaParts) {
 
 DEINE GRUNDHALTUNG: Im Zweifel GEGEN den Aufschläger entscheiden. Lieber einmal zu streng als einen Regelverstoß durchlassen. Ein Aufschlag muss ALLE Regeln EINDEUTIG erfüllen, um als korrekt zu gelten.
 
+KALIBRIERUNG AUS ECHTEN BEWERTUNGEN:
+Bisherige Nutzerbewertungen zeigen, dass du VIEL ZU MILDE bewertest. In Tests haben Menschen Aufschläge mit 1-2 von 10 bewertet, während du 6-9 von 10 vergeben hast. Das bedeutet:
+- Du markierst zu viele Regeln als "ok", die eigentlich "fail" sind
+- Du erkennst korrelierte Verstöße nicht (wenn der Wurf schlecht ist, sind MEHRERE Regeln betroffen)
+- Dein Gesamteindruck ist zu positiv
+KORRIGIERE DIESE TENDENZ: Sei DEUTLICH strenger als dein erster Instinkt!
+
 WICHTIG — GRUNDLEGENDE PRÜFUNG ZUERST:
 Bevor du Einzelregeln prüfst, stelle fest: Findet überhaupt ein REGELKONFORMER AUFSCHLAG statt?
-- Wird der Ball WIRKLICH hochgeworfen, oder wird er nur angetippt/direkt geschlagen/fallen gelassen?
+- Wird der Ball WIRKLICH hochgeworfen (mindestens 16cm!), oder wird er nur angetippt/direkt geschlagen/fallen gelassen?
 - Berührt der Ball nach dem Schlag die EIGENE Tischseite zuerst?
 - Ist eine erkennbare Aufschlagbewegung vorhanden (Hochwerfen → Fallen lassen → Schlagen)?
-Wenn GRUNDLEGENDE Elemente fehlen (kein Hochwerfen, Ball berührt nicht die eigene Seite), dann müssen MEHRERE Regeln als fail bewertet werden — nicht nur eine! Ein Aufschlag ohne echten Hochwurf verstößt gegen toss_height, toss_vertical UND hit_on_fall gleichzeitig.
+Wenn GRUNDLEGENDE Elemente fehlen, dann müssen MEHRERE Regeln als fail bewertet werden — nicht nur eine!
 
-Prüfe diese 8 offiziellen ITTF-Aufschlagregeln (Regel 2.06):
+KORRELIERTE REGELVERSTÖSSE — KRITISCH:
+Regeln hängen zusammen. Wenn ein fundamentaler Fehler vorliegt, MÜSSEN mehrere Regeln gleichzeitig als fail bewertet werden:
+
+1. KEIN ECHTER HOCHWURF (Ball wird nur angetippt, fallen gelassen, oder direkt geschlagen):
+   → toss_height = FAIL (kein ausreichender Wurf)
+   → toss_vertical = FAIL (ohne Wurf keine senkrechte Flugbahn)
+   → hit_on_fall = FAIL (ohne Wurf kein Scheitelpunkt und kein Fallen)
+
+2. BALL WIRD NACH HINTEN/SEITLICH GEWORFEN (nicht senkrecht):
+   → toss_vertical = FAIL (offensichtlich)
+   → toss_height = PRÜFE STRENG (schräge Würfe erreichen oft nicht die nötige Höhe)
+   → hit_on_fall = PRÜFE STRENG (bei schrägem Wurf oft Schlag vor dem Fallen)
+
+3. BALL BERÜHRT NICHT EIGENE TISCHSEITE:
+   → own_side_first = FAIL
+   → Dies ist ein SO SCHWERER Verstoß, dass der gesamte Aufschlag als regelwidrig gilt
+
+4. VERDECKEN UND SICHTBARKEIT:
+   → Wenn not_hidden = FAIL, prüfe auch visible_opponent streng (oft zusammenhängend)
+
+Es ist UNMÖGLICH, dass bei einem grundlegend falschen Aufschlag nur 1 von 9 Regeln als fail bewertet wird! Wenn du nur 1-2 Fails findest, überprüfe NOCHMAL ob du nicht zu milde warst.
+
+Prüfe diese 9 ITTF-Aufschlagregeln (Regel 2.06):
 ${ruleList}
 
 ANALYSE-ANWEISUNGEN:
 - Analysiere das Video Frame für Frame. Achte auf die GESAMTE Aufschlagbewegung vom Hochwerfen bis zum Schlag.
 - OFFENE HAND (MILDE BEWERTUNG): Prüfe ob der Ball auf der Handfläche liegt. Leicht gewölbte Hand oder nicht ganz gestreckte Finger sind OK — das ist praxisnah. Nur bei KLAR geschlossener Faust oder wenn der Ball offensichtlich eingeklemmt/gehalten wird, ist es ein Verstoß.
-- WURFHÖHE (PRAXISNAHE BEWERTUNG): Schätze die Wurfhöhe anhand des Balldurchmessers (4 cm). Der Ball muss mindestens ca. 2,5 Balldurchmesser (10 cm) sichtbar über die Hand steigen. Wichtig ist ein klarer, sichtbarer Hochwurf — kein minimales Anheben oder direktes Schlagen aus der Hand.
+- WURFHÖHE (STRENGE BEWERTUNG): Schätze die Wurfhöhe anhand des Balldurchmessers (4 cm). Der Ball muss mindestens 4 Balldurchmesser (16 cm) sichtbar über die Hand steigen. Ein Wurf der nur 2-3 Balldurchmesser hoch ist, ist ein FAIL. Bei Kindern und Anfängern GENAUSO STRENG bewerten — die Regeln gelten für ALLE.
 - SENKRECHTER WURF (BESONDERS STRENG PRÜFEN):
   1. Markiere mental die Ballposition beim Verlassen der Hand (Abwurfpunkt).
   2. Markiere die Ballposition am höchsten Punkt (Scheitelpunkt).
@@ -713,12 +742,19 @@ ANALYSE-ANWEISUNGEN:
   5. RÜCKWÄRTSWÜRFE ERKENNEN: Wenn der Ball nach hinten über die Hand/Schulter des Spielers wandert, ist das ein klarer Verstoß! Der Ball darf sich NICHT nach hinten zum Körper des Aufschlägers bewegen.
   6. Faustregel: Ist die horizontale Verschiebung mehr als ein halber Balldurchmesser (2 cm) bei einem 16cm-Wurf, liegt die Abweichung wahrscheinlich über 30°.
   7. Im Zweifel ist der Wurf NICHT senkrecht genug.
-- VERDECKEN: Prüfe ob Schulter, Arm oder Oberkörper den Ball zu irgendeinem Zeitpunkt verdecken — auch teilweise.
-- SCHLAG BEIM FALLEN: Der Ball muss einen KLAREN Scheitelpunkt haben und sichtbar fallen, bevor der Schläger zuschlägt.
+- VERDECKEN: Prüfe ob Schulter, Arm oder Oberkörper den Ball zu irgendeinem Zeitpunkt verdecken — auch teilweise. Dies ist einer der häufigsten Verstöße!
+- SCHLAG BEIM FALLEN: Der Ball muss einen KLAREN Scheitelpunkt haben und sichtbar fallen, bevor der Schläger zuschlägt. Wenn der Ball direkt aus der Hand geschlagen wird oder der Wurf so niedrig ist, dass kein klarer Scheitelpunkt erkennbar ist → FAIL.
 - Bewerte jede Regel einzeln als korrekt (true) oder fehlerhaft (false).
 - Wenn eine Regel im Video NICHT BEWERTBAR ist (z.B. Hand nicht sichtbar, Kamerawinkel falsch, Ball verdeckt durch Bildausschnitt), setze "ok" auf "na" und erkläre warum es nicht bewertbar ist. Gib außerdem einen konkreten "tipp" wie das Video aufgenommen werden müsste, damit diese Regel besser prüfbar ist.
 - Regeln die bewertbar sind, werden STRENG bewertet — im Zweifel GEGEN den Aufschläger.
 - Gib in der Begründung KONKRET an, was du im Video beobachtest (z.B. "Ball steigt nur ca. 8 cm, das sind etwa 2 Balldurchmesser — unter den geforderten 16 cm").
+
+REALITY-CHECK VOR DER AUSGABE:
+Bevor du dein JSON ausgibst, prüfe:
+- Wenn nur 0-2 Regeln als fail markiert sind: Bist du SICHER, dass der Aufschlag fast perfekt war? Überprüfe nochmal!
+- Wenn der Wurf offensichtlich schlecht war (zu niedrig, schräg, kein echter Wurf): Sind wirklich ALLE korrelierten Regeln als fail markiert?
+- Würde ein strenger Wettkampf-Schiedsrichter diesen Aufschlag WIRKLICH durchlassen?
+- Lieber 1-2 zu viele Fails als 1-2 zu wenige!
 
 Antworte NUR mit validem JSON in exakt diesem Format (keine Markdown-Codeblöcke, kein anderer Text):
 {
@@ -734,7 +770,7 @@ Antworte NUR mit validem JSON in exakt diesem Format (keine Markdown-Codeblöcke
     "own_side_first": {"ok": false, "reason": "Konkrete Beobachtung auf Deutsch"}
   },
   "score": 5,
-  "summary": "STRENGE, EHRLICHE Zusammenfassung auf Deutsch (2-3 Sätze). Sei KRITISCH und DIREKT. Wenn grundlegende Dinge fehlen (kein Hochwerfen, Ball berührt nicht eigene Seite), sage klar: 'Dieser Aufschlag ist regelwidrig.' Beschönige NICHTS. Nenne konkret die größten Verstöße zuerst, dann was gut war. Bei mehr als 2 Fehlern: klare Aussage dass der Aufschlag SO im Wettkampf nicht zulässig wäre."
+  "summary": "STRENGE, EHRLICHE Zusammenfassung auf Deutsch (2-3 Sätze). Sei KRITISCH und DIREKT. Wenn grundlegende Dinge fehlen (kein Hochwerfen, Ball berührt nicht eigene Seite), sage klar: 'Dieser Aufschlag ist regelwidrig.' Beschönige NICHTS. Nenne konkret die größten Verstöße zuerst, dann was gut war. Bei mehr als 2 Fehlern: klare Aussage dass der Aufschlag SO im Wettkampf nicht zulässig wäre. WICHTIG: Dein Ton soll EHRLICH und KONSTRUKTIV sein — wie ein strenger Trainer, nicht wie ein Diplomat. Sage was FALSCH ist, nicht was 'fast ok' war."
 }`;
 
   const parts = [...mediaParts, { text: prompt }];
@@ -744,7 +780,7 @@ Antworte NUR mit validem JSON in exakt diesem Format (keine Markdown-Codeblöcke
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
+      generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
     })
   });
 
