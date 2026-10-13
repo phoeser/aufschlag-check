@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tt-aufschlag-v1';
+const CACHE_NAME = 'tt-aufschlag-v2';
 const ASSETS = [
   '/aufschlag-check/',
   '/aufschlag-check/index.html',

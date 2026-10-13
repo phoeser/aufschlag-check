@@ -245,7 +245,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div style="padding:12px 16px">
       <div class="tip-card">
         <div class="tip-icon">&#129302;</div>
-        <div class="tip-text"><strong>Vollautomatisch:</strong> <span>Filme den Aufschlag von der Seite. Die KI analysiert automatisch alle 8 ITTF-Regeln und gibt einen Score.</span></div>
+        <div class="tip-text"><strong>Vollautomatisch:</strong> <span>Filme den Aufschlag von der Seite. Die KI analysiert automatisch alle 9 ITTF-Regeln und gibt einen Score.</span></div>
       </div>
     </div>
   </div>
@@ -255,7 +255,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div class="analyze-screen">
       <div class="spinner"></div>
       <div class="analyze-title">KI analysiert deinen Aufschlag...</div>
-      <div class="analyze-sub">Google Gemini pr&uuml;ft alle 8 ITTF-Regeln anhand der Video-Frames</div>
+      <div class="analyze-sub">Google Gemini pr&uuml;ft alle 9 ITTF-Regeln anhand der Video-Frames</div>
       <div class="analyze-steps">
         <div class="analyze-step" id="step-upload"><span class="step-icon">&#9898;</span> Video hochladen</div>
         <div class="analyze-step" id="step-analyze"><span class="step-icon">&#9898;</span> KI analysiert Aufschlag</div>
@@ -275,7 +275,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
           </svg>
           <div class="score-gauge-text">
             <div id="score-number" class="score-number">&ndash;</div>
-            <div class="score-label">von 10</div>
+            <div class="score-label">Regeln erfüllt</div>
           </div>
         </div>
         <div id="result-title" class="result-title"></div>
@@ -373,7 +373,7 @@ const RULES = [
   { id:'visible_opponent', name:'Sichtbar für den Gegner', ref:'ITTF 2.06.05', detail:'Der Ball muss vom Moment des Hochwerfens bis zum Schlag jederzeit für den Gegner (Rückschläger) sichtbar sein. Er darf zu KEINEM Zeitpunkt verdeckt werden.' },
   { id:'not_hidden', name:'Nicht durch Körper verdeckt', ref:'ITTF 2.06.05', detail:'Der Aufschläger darf den Ball NICHT mit irgendeinem Körperteil oder Kleidung verdecken. Besonders der freie Arm, die Schulter oder der Oberkörper dürfen den Ball nicht zwischen Hochwerfen und Schlag verbergen. STRENG PRÜFEN: Auch teilweises Verdecken ist ein Verstoß.' },
   { id:'hand_removed', name:'Freie Hand entfernt', ref:'ITTF 2.06.02', detail:'Die freie Hand (Wurfhand) und der freie Arm müssen sofort nach dem Hochwerfen aus dem Bereich zwischen Ball und Netz entfernt werden. Die Hand darf NICHT im Schlagbereich verbleiben.' },
-  { id:'own_side_first', name:'Ball berührt zuerst eigene Seite', ref:'ITTF 2.06.06', detail:'Der Ball muss nach dem Schlag ZUERST auf der eigenen Tischseite des Aufschlägers aufspringen, BEVOR er über das Netz auf die gegnerische Seite fliegt. Ein Aufschlag, bei dem der Ball direkt auf die gegnerische Seite oder ins Netz gespielt wird, ohne die eigene Seite zu berühren, ist UNGÜLTIG. STRENG PRÜFEN.', hidden: true }
+  { id:'own_side_first', name:'Ball berührt zuerst eigene Seite', ref:'ITTF 2.06.06', detail:'Der Ball muss nach dem Schlag ZUERST auf der eigenen Tischseite des Aufschlägers aufspringen, BEVOR er über das Netz auf die gegnerische Seite fliegt. Ein Aufschlag, bei dem der Ball direkt auf die gegnerische Seite oder ins Netz gespielt wird, ohne die eigene Seite zu berühren, ist UNGÜLTIG. STRENG PRÜFEN.' }
 ];
 
 // ===== STATE =====
@@ -1094,7 +1094,7 @@ async function renderHistory() {
     const serves = await getAllServes();
     if (serves.length === 0) { list.innerHTML = '<div class="empty-state"><div class="icon">&#127955;</div><p>Noch keine Aufschl\u00e4ge gespeichert.</p></div>'; return; }
     list.innerHTML = serves.map(h => {
-      const ok = h.ok || 0; const ev = h.evaluated || h.total || 8; const hna = h.na || 0;
+      const ok = h.ok || 0; const ev = h.evaluated || h.total || RULES.length; const hna = h.na || 0;
       const cls = ok === ev ? 'pass' : ok >= ev - 1 ? 'good' : ok >= ev - 3 ? 'partial' : ok >= ev - 5 ? 'poor' : 'fail';
       const ico = ok === ev ? '&#9989;' : ok >= ev - 1 ? '&#128077;' : ok >= ev - 3 ? '&#9888;&#65039;' : '&#10060;';
       let detailHtml = '';
@@ -1160,7 +1160,7 @@ window._shareServe = async id => {
   const db = await openDB(); const tx = db.transaction(STORE,'readonly'); const r = tx.objectStore(STORE).get(id);
   r.onsuccess = async () => {
     const h = r.result; if(!h) return;
-    const ok = h.ok || 0; const ev = h.evaluated || h.total || 8; const hna = h.na || 0;
+    const ok = h.ok || 0; const ev = h.evaluated || h.total || RULES.length; const hna = h.na || 0;
     const emoji = ok === ev ? '\u2705' : ok >= ev - 1 ? '\ud83d\udc4d' : ok >= ev - 3 ? '\u26a0\ufe0f' : '\u274c';
     let text = `\ud83c\udfd3 *TT Aufschlag-Check*\n\nErgebnis: *${ok}/${ev} Regeln* ${emoji}${hna ? ` (${hna} nicht prüfbar)` : ''}\n`;
     if (h.rules) {
